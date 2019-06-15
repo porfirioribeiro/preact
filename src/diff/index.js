@@ -1,7 +1,7 @@
 import { EMPTY_OBJ, EMPTY_ARR } from '../constants';
 import { Component, enqueueRender } from '../component';
-import { coerceToVNode, Fragment } from '../create-element';
-import { diffChildren, toChildArray } from './children';
+import { Fragment } from '../create-element';
+import { diffChildren } from './children';
 import { diffProps } from './props';
 import { assign, removeNode } from '../util';
 import options from '../options';
@@ -113,7 +113,7 @@ export function diff(parentDom, newVNode, oldVNode, context, isSvg, excessDomChi
 			try {
 				tmp = c.render(c.props, c.state, c.context);
 				let isTopLevelFragment = tmp != null && tmp.type == Fragment && tmp.key == null;
-				toChildArray(isTopLevelFragment ? tmp.props.children : tmp, newVNode._children=[], coerceToVNode, true);
+				newVNode._children = isTopLevelFragment ? tmp.props.children : tmp;
 			}
 			catch (e) {
 				if ((tmp = options._catchRender) && tmp(e, newVNode, oldVNode)) break outer;
@@ -239,6 +239,7 @@ function diffElementNodes(dom, newVNode, oldVNode, context, isSvg, excessDomChil
 			dom.multiple = newProps.multiple;
 		}
 
+		newVNode._children = newVNode.props.children;
 		diffChildren(dom, newVNode, oldVNode, context, newVNode.type==='foreignObject' ? false : isSvg, excessDomChildren, mounts, EMPTY_OBJ);
 		diffProps(dom, newProps, oldProps, isSvg);
 	}

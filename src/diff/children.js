@@ -22,9 +22,8 @@ import { removeNode } from '../util';
  * Fragments that have siblings. In most cases, it starts out as `oldChildren[0]._dom`.
  */
 export function diffChildren(parentDom, newParentVNode, oldParentVNode, context, isSvg, excessDomChildren, mounts, oldDom) {
-	let childVNode, i, j, oldVNode, newDom, sibDom, firstChildDom, refs;
+	let i, j, oldVNode, newDom, sibDom, firstChildDom, refs;
 
-	let newChildren = newParentVNode._children || toChildArray(newParentVNode.props.children, newParentVNode._children=[], coerceToVNode, true);
 	// This is a compression of oldParentVNode!=null && oldParentVNode != EMPTY_OBJ && oldParentVNode._children || EMPTY_ARR
 	// as EMPTY_OBJ._children should be `undefined`.
 	let oldChildren = (oldParentVNode && oldParentVNode._children) || EMPTY_ARR;
@@ -47,8 +46,8 @@ export function diffChildren(parentDom, newParentVNode, oldParentVNode, context,
 		}
 	}
 
-	for (i=0; i<newChildren.length; i++) {
-		childVNode = newChildren[i] = coerceToVNode(newChildren[i]);
+	i=0;
+	newParentVNode._children = toChildArray(newParentVNode._children, childVNode => {
 
 		if (childVNode!=null) {
 			childVNode._parent = newParentVNode;
@@ -134,7 +133,10 @@ export function diffChildren(parentDom, newParentVNode, oldParentVNode, context,
 				}
 			}
 		}
-	}
+
+		i++;
+		return childVNode;
+	});
 
 	newParentVNode._dom = firstChildDom;
 
@@ -153,27 +155,29 @@ export function diffChildren(parentDom, newParentVNode, oldParentVNode, context,
 }
 
 /**
- * Flatten a virtual nodes children to a single dimensional array
+ * Flatten and loop through the children of a virtual node
  * @param {import('../index').ComponentChildren} children The unflattened
  * children of a virtual node
- * @param {Array<import('../internal').VNode | null>} [flattened] An flat array of children to modify
- * @param {typeof import('../create-element').coerceToVNode} [map] Function that
- * will be applied on each child if the `vnode` is not `null`
- * @param {boolean} [keepHoles] wether to coerce `undefined` to `null` or not.
- * This is needed for Components without children like `<Foo />`.
+ * @param {(vnode: import('../internal').VNode) => import('../internal').VNode} [callback]
+ * A function to invoke for each child before it is added to the flattened list.
+ * @param {import('../internal').VNode[]} [flattened] An flat array of children to modify
+ * @returns {import('../internal').VNode[]}
  */
-export function toChildArray(children, flattened, map, keepHoles) {
+export function toChildArray(children, callback, flattened) {
+	// TODO: Consider maintaining index here
+	// TODO: Consider not relying on callback to return the VNode
 	if (flattened == null) flattened = [];
+
 	if (children==null || typeof children === 'boolean') {
-		if (keepHoles) flattened.push(null);
+		if (callback) flattened.push(callback(null));
 	}
 	else if (Array.isArray(children)) {
 		for (let i=0; i < children.length; i++) {
-			toChildArray(children[i], flattened, map, keepHoles);
+			toChildArray(children[i], callback, flattened);
 		}
 	}
 	else {
-		flattened.push(map ? map(children) : children);
+		flattened.push(callback ? callback(coerceToVNode(children)) : children);
 	}
 
 	return flattened;
