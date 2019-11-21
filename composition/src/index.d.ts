@@ -1,4 +1,5 @@
 import { PreactContext, JSX, Component } from 'preact';
+export * from './store';
 
 type FC<P> = (props: P) => JSX.Element;
 
@@ -85,6 +86,11 @@ export function watch<P, T0, T1, T2>(
 ): WatchResult<[T0, T1, T2]>;
 
 /** watch values with a callback returning a promise and default value */
+export function watch<P, R>(
+	src: [],
+	cb: () => PromiseLike<R>,
+	def: R
+): WatchResult<R>;
 export function watch<P, T, R>(
 	src: WatchSrc<T, P>,
 	cb: (value: T) => PromiseLike<R>,
@@ -102,6 +108,10 @@ export function watch<P, T0, T1, T2, R>(
 ): WatchResult<R>;
 
 /** watch values with a callback returning a promise */
+export function watch<P, R>(
+	src: [],
+	cb: WatchCb<[], PromiseLike<R>>
+): WatchResult<R | undefined>;
 export function watch<P, T, R>(
 	src: WatchSrc<T, P>,
 	cb: WatchCb<[T], PromiseLike<R>>
@@ -116,6 +126,7 @@ export function watch<P, T0, T1, T2, R>(
 ): WatchResult<R | undefined>;
 
 /** watch values with a callback returning a value */
+export function watch<P, R>(src: [], cb: WatchCb<[], R>): WatchResult<R>;
 export function watch<P, T, R>(
 	src: WatchSrc<T, P>,
 	cb: WatchCb<[T], R>

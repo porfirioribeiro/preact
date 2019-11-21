@@ -1,6 +1,11 @@
-import { createElement } from "preact";
-import { createComponent, watch } from "preact/composition";
-import { useMousePosition, useWindowSize } from "./utils/use";
+import { createElement } from 'preact';
+import { createComponent, watch } from 'preact/composition';
+import {
+	useMousePosition,
+	useWindowSize,
+	mousePositionStore,
+	windowSizeStore
+} from './utils/use';
 
 export default createComponent(function() {
 	const mousePos = useMousePosition();
@@ -8,18 +13,17 @@ export default createComponent(function() {
 
 	const size = 100;
 	const gap = 5;
+	// useMousePosition() or watch(mousePositionStore) begaves the same way
+	// using both here for the sake of the sample
 
 	const pos = watch(
-		[mousePos, windowSize],
+		[mousePositionStore, windowSizeStore],
 		({ x, y }, { width, height }) => ({
 			x: x + gap + size > width ? width - size : x + gap,
 			y: y + gap + size > height ? height - size : y + gap,
 			color: `RGB(${(255 * x) / width}, 255, ${(255 * y) / height})`
 		})
 	);
-
-	const a = watch(pos, p => p.color);
-	console.log(a.value);
 
 	return () => {
 		return (
@@ -28,9 +32,9 @@ export default createComponent(function() {
 					background: pos.value.color,
 					width: size,
 					height: size,
-					position: "absolute",
-					left: pos.value.x + "px",
-					top: pos.value.y + "px"
+					position: 'absolute',
+					left: pos.value.x + 'px',
+					top: pos.value.y + 'px'
 				}}
 			>
 				{mousePos.value.x} - {mousePos.value.y} <br />

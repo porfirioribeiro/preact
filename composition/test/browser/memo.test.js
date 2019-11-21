@@ -55,4 +55,33 @@ describe('memo', () => {
 		expect(comparer).to.be.calledTwice;
 		expect(comparer).to.be.calledWith({ a: 1 }, { a: 2 });
 	});
+
+	it('memoize shallow props and ref', () => {
+		const renders = sinon.spy();
+		const Comp = createComponent(() => {
+			memo();
+			return (props, ref) => renders(ref);
+		});
+
+		const fnref1 = sinon.spy();
+		const fnref2 = sinon.spy();
+		render(<Comp ref={fnref1} />, scratch);
+		render(<Comp ref={fnref1} />, scratch);
+
+		expect(renders).to.be.calledOnce.and.to.be.calledWith(fnref1);
+
+		render(<Comp ref={fnref1} a={2} />, scratch);
+		render(<Comp ref={fnref1} a={2} />, scratch);
+		expect(renders).to.be.calledTwice.and.to.be.calledWith(fnref1);
+
+		render(<Comp ref={fnref2} a={2} />, scratch);
+		render(<Comp ref={fnref2} a={2} />, scratch);
+		expect(renders).to.be.calledThrice.and.to.be.calledWith(fnref2);
+
+		render(<Comp a={2} />, scratch);
+		render(<Comp a={2} />, scratch);
+		expect(renders)
+			.to.be.callCount(4)
+			.and.to.be.calledWith(undefined);
+	});
 });

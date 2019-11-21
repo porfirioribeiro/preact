@@ -19,13 +19,14 @@
       "$_processingException": "__",
       "$_root": "__",
       "$_commit": "__c",
-      "$_suspensions": "__u",
+      "$_pendingSuspensionCount": "__u",
       "$_detachOnNextRender": "__b",
       "$_diff": "__b",
       "$_render": "__r",
       "$_hook": "__h",
       "$_catchError": "__e",
-      "$_unmount": "_e"
+      "$_unmount": "_e",
+      "$_suspendedComponentWillUnmount": "__c"
     }
   }
 }

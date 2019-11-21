@@ -9,6 +9,7 @@
         "regex": "^_",
         "reserved": [
           "__REACT_DEVTOOLS_GLOBAL_HOOK__",
+          "__PREACT_DEVTOOLS__",
           "_renderers",
           "__source",
           "__self"
@@ -24,7 +25,7 @@
       "$_prevState": "__u",
       "$_nextState": "__s",
       "$_renderCallbacks": "__h",
-      "$_suspensions": "__u",
+      "$_pendingSuspensionCount": "__u",
       "$_vnode": "__v",
       "$_children": "__k",
       "$_dom": "__e",
@@ -40,7 +41,8 @@
       "$_render": "__r",
       "$_hook": "__h",
       "$_catchError": "__e",
-      "$_unmount": "_e"
+      "$_unmount": "_e",
+      "$_owner": "__o"
     }
   }
 }

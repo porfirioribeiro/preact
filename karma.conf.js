@@ -61,6 +61,33 @@ var localLaunchers = {
 	}
 };
 
+const babelOptions = (options = {}) => {
+	return {
+		babelrc: false,
+		cacheDirectory: true,
+		presets: [
+			[
+				'@babel/preset-env',
+				{
+					loose: true,
+					exclude: ['@babel/plugin-transform-typeof-symbol'],
+					targets: {
+						browsers: ['last 2 versions', 'IE >= 9']
+					}
+				}
+			]
+		],
+		plugins: [
+			coverage && ['istanbul', { include: '**/src/**/*.js' }],
+			'@babel/plugin-proposal-object-rest-spread',
+			options.debug && '@babel/plugin-transform-react-jsx-source',
+			'@babel/plugin-transform-react-jsx',
+			'babel-plugin-transform-async-to-promises'
+		].filter(Boolean),
+		ignore: ['./dist']
+	};
+};
+
 module.exports = function(config) {
 	config.set({
 		browsers: sauceLabs
@@ -134,16 +161,30 @@ module.exports = function(config) {
 
 				/* Transpile source and test files */
 				rules: [
+					// Special case for babel plugins that should not be enabled
+					// in production mode and only be enabled for specific
+					// test files
 					{
 						enforce: 'pre',
+						test: /(component-stack|debug)\.test\.js$/,
+						exclude: /node_modules/,
+						loader: 'babel-loader',
+						options: babelOptions({ debug: true })
+					},
+
+					// Special case for sinon.js which ships ES2015+ code in their
+					// esm bundle
+					{
+						test: /node_modules\/sinon\/.*\.jsx?$/,
+						loader: 'babel-loader',
+						options: babelOptions()
+					},
+
+					{
 						test: /\.jsx?$/,
 						exclude: /node_modules/,
 						loader: 'babel-loader',
-						options: {
-							plugins: coverage
-								? [['istanbul', { include: '**/src/**/*.js' }]]
-								: []
-						}
+						options: babelOptions()
 					}
 				]
 			},
@@ -153,6 +194,7 @@ module.exports = function(config) {
 				// directly
 				alias: {
 					'preact/debug': path.join(__dirname, './debug/src'),
+					'preact/devtools': path.join(__dirname, './devtools/src'),
 					'preact/compat': path.join(__dirname, './compat/src'),
 					'preact/hooks': path.join(__dirname, './hooks/src'),
 					'preact/composition': path.join(__dirname, './composition/src'),
@@ -164,8 +206,7 @@ module.exports = function(config) {
 				new webpack.DefinePlugin({
 					coverage: coverage,
 					NODE_ENV: JSON.stringify(process.env.NODE_ENV || ''),
-					ENABLE_PERFORMANCE: performance,
-					DISABLE_FLAKEY: !!String(process.env.FLAKEY).match(/^(0|false)$/gi)
+					ENABLE_PERFORMANCE: performance
 				})
 			],
 			performance: {

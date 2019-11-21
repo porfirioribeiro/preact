@@ -12,13 +12,7 @@
       "$_value": "__v",
       "$_defaultValue": "__p",
       "$_id": "__c",
-      "$_parentDom": "__P",
-      "$_root": "__p",
-      "$_diff": "__b",
-      "$_commit": "__c",
-      "$_render": "__r",
-      "$_catchError": "__e",
-      "$_unmount": "_e"
+      "$_vnode": "__v"
     }
   }
 }

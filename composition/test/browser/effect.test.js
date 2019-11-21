@@ -128,17 +128,4 @@ describe('effect', () => {
 		expect(spy).to.be.calledWith({ count: 2 });
 		expect(spy).to.be.calledTwice;
 	});
-
-	it('call effect with DOM refs', async () => {
-		const spy = sinon.spy();
-		const Comp = createComponent(() => {
-			const inputref = createRef(null);
-			effect(() => inputref.current, spy);
-			return () => <input ref={inputref} />;
-		});
-
-		render(<Comp />, scratch);
-
-		expect(spy).to.be.calledWith(scratch.firstChild);
-	});
 });
