@@ -10,9 +10,11 @@ import options from './options';
  */
 export function createElement(type, props, children) {
 	let normalizedProps = {},
+		forwarded = type && type._forwarded,
 		i;
 	for (i in props) {
-		if (i !== 'key' && i !== 'ref') normalizedProps[i] = props[i];
+		if (i !== 'key' && !(i == 'ref' && !forwarded))
+			normalizedProps[i] = props[i];
 	}
 
 	if (arguments.length > 3) {
@@ -40,7 +42,7 @@ export function createElement(type, props, children) {
 		type,
 		normalizedProps,
 		props && props.key,
-		props && props.ref
+		!forwarded && props && props.ref
 	);
 }
 
