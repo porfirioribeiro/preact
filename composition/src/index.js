@@ -1,4 +1,4 @@
-import { options } from 'preact';
+import { options, Component } from 'preact';
 import { assign } from '../../src/util';
 
 /** @type {import('./internal').Component} */
@@ -16,71 +16,55 @@ options.vnode = vnode => {
 	if (oldVNodeHook) oldVNodeHook(vnode);
 };
 
-let oldBeforeRender = options._render;
-options._render = vnode => {
-	if (oldBeforeRender) oldBeforeRender(vnode);
+const $Reactive = Symbol('reactive');
 
-	/** @type {import('./internal').Component} */
-	const c = (currentComponent = vnode._component);
+export function createComponent(setupFn) {
+	function CompositionComponent(initialProps) {}
 
-	/** the vnode component is a uninitialized composition component */
-	if (c.constructor.__compositions && !c.__compositions) {
+	// @ts-ignore
+	const cp = (CompositionComponent.prototype = new Component());
+	cp.componentWillMount = function() {
+		console.log('cWM');
+
+		const c = this;
 		c.__compositions = { u: [], w: [], e: [], x: {} };
 		// this could be simplified if the API change to receive `ref` in props
-		// c.constructor = c.constructor(c);
-		const render = c.constructor(c);
-		c.constructor =
-			'ref' in c.props
-				? props => {
-						let clone = assign({}, props);
-						delete clone.ref;
-						return render(clone, props.ref);
-				  }
-				: render;
-	}
+		currentComponent = c;
+		// c.render = setupFn(c);
+		const render = setupFn(c);
 
-	/** the vnode component is a composition initialized component */
-	if (c.__compositions)
-		// call all watch
-		c.__compositions.w.some(up => {
-			handleEffect(up, c);
-		});
-};
+		c.render = function(props, state, context) {
+			// call all watch
+			c.__compositions.w.some(up => {
+				handleEffect(up, c);
+			});
 
-let oldAfterDiff = options.diffed;
-options.diffed = vnode => {
-	if (oldAfterDiff) oldAfterDiff(vnode);
+			return render(props);
+			// let clone = assign({}, props);
+			// delete clone.ref;
+			// return render(clone, props.ref);
+		};
+	};
 
-	/** @type {import('./internal').Component} */
-	const c = vnode._component;
-	if (c && c.__compositions)
+	cp.componentDidMount = cp.componentDidUpdate = function() {
+		const c = this;
 		// handle all `effect`s
 		c.__compositions.e.some(up => {
 			handleEffect(up, c);
 		});
-};
+	};
+	cp.componentWillUnmount = function() {
+		const c = this;
 
-let oldBeforeUnmount = options.unmount;
-options.unmount = vnode => {
-	if (oldBeforeUnmount) oldBeforeUnmount(vnode);
-
-	/** @type {import('./internal').Component} */
-	const c = vnode._component;
-	if (c && c.__compositions) {
 		// cleanup `effect`s onCleanup
 		c.__compositions.e.some(cleanupEffect);
 		// call all onUnmounted lifecycle callbacks
 		c.__compositions.u.some(f => {
 			f();
 		});
-	}
-};
-
-const $Reactive = Symbol('reactive');
-
-export function createComponent(comp) {
-	comp.__compositions = true;
-	return comp;
+	};
+	// CompositionComponent.__compositions = true;
+	return CompositionComponent;
 }
 
 export function memo(comparer) {

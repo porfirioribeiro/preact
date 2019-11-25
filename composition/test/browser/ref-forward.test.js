@@ -16,7 +16,7 @@ describe('ref-forward', () => {
 		teardown(scratch);
 	});
 
-	it('forwards ref', () => {
+	it.skip('forwards ref', () => {
 		const r = createRef();
 
 		// eslint-disable-next-line react/display-name
@@ -33,7 +33,7 @@ describe('ref-forward', () => {
 		expect(r.current).to.be.null;
 	});
 
-	it('forwards function to ref', () => {
+	it.skip('forwards function to ref', () => {
 		const spy = sinon.spy();
 
 		// eslint-disable-next-line react/display-name
