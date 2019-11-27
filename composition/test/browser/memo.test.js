@@ -55,4 +55,23 @@ describe('memo', () => {
 		expect(comparer).to.be.calledTwice;
 		expect(comparer).to.be.calledWith({ a: 1 }, { a: 2 });
 	});
+
+	it.only('memoize shallow props and ref', () => {
+		const renders = sinon.spy();
+		const Comp = createComponent(() => {
+			memo();
+			return (props, ref) => renders(ref);
+		});
+
+		const fnref1 = sinon.spy();
+		const fnref2 = sinon.spy();
+		render(<Comp ref={fnref1} />, scratch);
+		render(<Comp ref={fnref1} />, scratch);
+
+		expect(renders).to.be.calledOnce;
+
+		// render(<Comp a={2} />, scratch);
+
+		// expect(renders).to.be.calledTwice;
+	});
 });

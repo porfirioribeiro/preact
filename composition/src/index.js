@@ -4,17 +4,20 @@ import { assign } from '../../src/util';
 /** @type {import('./internal').Component} */
 let currentComponent;
 
-let oldVNodeHook = options.vnode;
-options.vnode = vnode => {
-	let type = vnode.type;
-	// Update the ref to forward
-	if (type && type.__compositions && vnode.ref) {
-		vnode.props.ref = vnode.ref;
-		vnode.ref = null;
-	}
+// let oldVNodeHook = options.vnode;
+// options.vnode = vnode => {
+// 	let type = vnode.type;
+// 	// Update the ref to forward
+// 	if (type && type.__compositions && vnode.ref) {
+// 		vnode.props.ref = vnode.ref;
+// 		vnode._ref = vnode.ref;
+// 		// console.log(vnode.ref);
+// 		vnode.ref = null;
 
-	if (oldVNodeHook) oldVNodeHook(vnode);
-};
+// 	}
+
+// 	if (oldVNodeHook) oldVNodeHook(vnode);
+// };
 
 const $Reactive = Symbol('reactive');
 
@@ -24,13 +27,8 @@ export function createComponent(setupFn) {
 	// @ts-ignore
 	const cp = (CompositionComponent.prototype = new Component());
 	cp.componentWillMount = function() {
-		console.log('cWM');
-
-		const c = this;
+		const c = (currentComponent = this);
 		c.__compositions = { u: [], w: [], e: [], x: {} };
-		// this could be simplified if the API change to receive `ref` in props
-		currentComponent = c;
-		// c.render = setupFn(c);
 		const render = setupFn(c);
 
 		c.render = function(props, state, context) {
@@ -39,10 +37,16 @@ export function createComponent(setupFn) {
 				handleEffect(up, c);
 			});
 
-			return render(props);
+			// if (!props.ref) return render(props);
 			// let clone = assign({}, props);
 			// delete clone.ref;
 			// return render(clone, props.ref);
+
+			console.log('render', this._vnode.ref);
+
+			const ref = (c._ref = c._vnode.ref);
+			c._vnode.ref = null;
+			return render(props, ref);
 		};
 	};
 
@@ -63,12 +67,14 @@ export function createComponent(setupFn) {
 			f();
 		});
 	};
-	// CompositionComponent.__compositions = true;
+	CompositionComponent.__compositions = true;
 	return CompositionComponent;
 }
 
 export function memo(comparer) {
 	currentComponent.shouldComponentUpdate = function(nextProps) {
+		console.log('sCU', this._vnode.ref, this._ref);
+
 		return (comparer || shallowDiffers)(this.props, nextProps);
 	};
 }
