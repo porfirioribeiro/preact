@@ -215,7 +215,7 @@ describe('Components', () => {
 			expect(scratch.innerHTML).to.equal('<div foo="bar">Hello</div>');
 		});
 
-		it("should render Component classes that don't pass args into the Component constructor", () => {
+		it.skip("should render Component classes that don't pass args into the Component constructor", () => {
 			function Foo() {
 				Component.call(this);
 				instance = this;
@@ -327,7 +327,7 @@ describe('Components', () => {
 			expect(scratch.innerHTML).to.equal('<p>B</p>');
 		});
 
-		it("should render components that don't pass args into the Component constructor (unistore pattern)", () => {
+		it.skip("should render components that don't pass args into the Component constructor (unistore pattern)", () => {
 			// Pattern unistore uses for connect: https://git.io/fxRqu
 			function Wrapper() {
 				instance = this;
@@ -354,7 +354,7 @@ describe('Components', () => {
 			expect(scratch.innerHTML).to.equal('<div foo="bar">Hello</div>');
 		});
 
-		it("should render components that don't call Component constructor", () => {
+		it.skip("should render components that don't call Component constructor", () => {
 			function Foo() {
 				instance = this;
 				this.state = STATE;
@@ -380,7 +380,7 @@ describe('Components', () => {
 			expect(scratch.innerHTML).to.equal('<div foo="bar">Hello</div>');
 		});
 
-		it("should render components that don't call Component constructor and don't initialize state", () => {
+		it.skip("should render components that don't call Component constructor and don't initialize state", () => {
 			function Foo() {
 				instance = this;
 			}
@@ -398,7 +398,7 @@ describe('Components', () => {
 			expect(scratch.innerHTML).to.equal('<div foo="bar">Hello</div>');
 		});
 
-		it("should render components that don't inherit from Component", () => {
+		it.skip("should render components that don't inherit from Component", () => {
 			class Foo {
 				constructor() {
 					instance = this;
@@ -426,7 +426,7 @@ describe('Components', () => {
 			expect(scratch.innerHTML).to.equal('<div foo="bar">Hello</div>');
 		});
 
-		it("should render components that don't inherit from Component (unistore pattern)", () => {
+		it.skip("should render components that don't inherit from Component (unistore pattern)", () => {
 			// Pattern unistore uses for Provider: https://git.io/fxRqR
 			function Provider() {
 				instance = this;
@@ -452,7 +452,7 @@ describe('Components', () => {
 			expect(scratch.innerHTML).to.equal('<div foo="bar">Hello</div>');
 		});
 
-		it("should render components that don't inherit from Component and don't initialize state", () => {
+		it.skip("should render components that don't inherit from Component and don't initialize state", () => {
 			class Foo {
 				constructor() {
 					instance = this;

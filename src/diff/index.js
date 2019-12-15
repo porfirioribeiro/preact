@@ -1,5 +1,5 @@
 import { EMPTY_OBJ, EMPTY_ARR } from '../constants';
-import { Component } from '../component';
+import { CoreComponent } from '../component';
 import { Fragment } from '../create-element';
 import { diffChildren, toChildArray } from './children';
 import { diffProps } from './props';
@@ -43,7 +43,7 @@ export function diff(
 	if ((tmp = options._diff)) tmp(newVNode);
 
 	try {
-		outer: if (typeof newType === 'function') {
+		if (typeof newType === 'function') {
 			let c, isNew, oldProps, oldState, snapshot, clearProcessingException;
 			let newProps = newVNode.props;
 
@@ -63,119 +63,35 @@ export function diff(
 				clearProcessingException = c._processingException = c._pendingError;
 			} else {
 				// Instantiate the new component
-				if ('prototype' in newType && newType.prototype.render) {
+				if ('prototype' in newType && newType.prototype.$render) {
 					newVNode._component = c = new newType(newProps, cctx); // eslint-disable-line new-cap
 				} else {
-					newVNode._component = c = new Component(newProps, cctx);
+					newVNode._component = c = new CoreComponent(newProps, cctx);
 					c.constructor = newType;
-					c.render = doRender;
+					c.$render = doRender;
 				}
 				if (provider) provider.sub(c);
-
-				c.props = newProps;
-				if (!c.state) c.state = {};
-				c.context = cctx;
 				c._context = context;
 				isNew = c._dirty = true;
 				c._renderCallbacks = [];
 			}
 
-			// Invoke getDerivedStateFromProps
-			if (c._nextState == null) {
-				c._nextState = c.state;
-			}
-			if (newType.getDerivedStateFromProps != null) {
-				if (c._nextState == c.state) {
-					c._nextState = assign({}, c._nextState);
-				}
-
-				assign(
-					c._nextState,
-					newType.getDerivedStateFromProps(newProps, c._nextState)
-				);
-			}
-
-			oldProps = c.props;
-			oldState = c.state;
-
-			// Invoke pre-render lifecycle methods
-			if (isNew) {
-				if (
-					newType.getDerivedStateFromProps == null &&
-					c.componentWillMount != null
-				) {
-					c.componentWillMount();
-				}
-
-				if (c.componentDidMount != null) {
-					c._renderCallbacks.push(c.componentDidMount);
-				}
-			} else {
-				if (
-					newType.getDerivedStateFromProps == null &&
-					c._force == null &&
-					c.componentWillReceiveProps != null
-				) {
-					c.componentWillReceiveProps(newProps, cctx);
-				}
-
-				if (
-					!c._force &&
-					c.shouldComponentUpdate != null &&
-					c.shouldComponentUpdate(newProps, c._nextState, cctx) === false
-				) {
-					c.props = newProps;
-					c.state = c._nextState;
-					c._dirty = false;
-					c._vnode = newVNode;
-					newVNode._dom = oldVNode._dom;
-					newVNode._children = oldVNode._children;
-					if (c._renderCallbacks.length) {
-						commitQueue.push(c);
-					}
-					for (tmp = 0; tmp < newVNode._children.length; tmp++) {
-						if (newVNode._children[tmp]) {
-							newVNode._children[tmp]._parent = newVNode;
-						}
-					}
-					break outer;
-				}
-
-				if (c.componentWillUpdate != null) {
-					c.componentWillUpdate(newProps, c._nextState, cctx);
-				}
-
-				if (c.componentDidUpdate != null) {
-					c._renderCallbacks.push(() => {
-						c.componentDidUpdate(oldProps, oldState, snapshot);
-					});
-				}
-			}
-
-			c.context = cctx;
-			c.props = newProps;
-			c.state = c._nextState;
-
 			if ((tmp = options._render)) tmp(newVNode);
 
+			tmp = c.$render(newProps, cctx);
 			c._dirty = false;
 			c._vnode = newVNode;
 			c._parentDom = parentDom;
-
-			tmp = c.render(c.props, c.state, c.context);
-			let isTopLevelFragment =
-				tmp != null && tmp.type == Fragment && tmp.key == null;
-			newVNode._children = toChildArray(
-				isTopLevelFragment ? tmp.props.children : tmp
-			);
 
 			if (c.getChildContext != null) {
 				context = assign(assign({}, context), c.getChildContext());
 			}
 
-			if (!isNew && c.getSnapshotBeforeUpdate != null) {
-				snapshot = c.getSnapshotBeforeUpdate(oldProps, oldState);
-			}
+			let isTopLevelFragment =
+				tmp != null && tmp.type == Fragment && tmp.key == null;
+			newVNode._children = toChildArray(
+				isTopLevelFragment ? tmp.props.children : tmp
+			);
 
 			diffChildren(
 				parentDom,
@@ -215,7 +131,24 @@ export function diff(
 
 		if ((tmp = options.diffed)) tmp(newVNode);
 	} catch (e) {
-		options._catchError(e, newVNode, oldVNode);
+		// if the component throws itself while rendering, we need to set everything
+		if (e == newVNode._component) {
+			const c = newVNode._component;
+			c._dirty = false;
+			c._vnode = newVNode;
+			newVNode._dom = oldVNode._dom;
+			newVNode._children = oldVNode._children;
+			if (c._renderCallbacks.length) {
+				commitQueue.push(c);
+			}
+			for (tmp = 0; tmp < newVNode._children.length; tmp++) {
+				if (newVNode._children[tmp]) {
+					newVNode._children[tmp]._parent = newVNode;
+				}
+			}
+		} else {
+			options._catchError(e, newVNode, oldVNode);
+		}
 	}
 
 	return newVNode._dom;
@@ -438,6 +371,6 @@ export function unmount(vnode, parentVNode, skipRemove) {
 }
 
 /** The `.render()` method for a PFC backing instance. */
-function doRender(props, state, context) {
+function doRender(props, context) {
 	return this.constructor(props, context);
 }

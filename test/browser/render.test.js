@@ -1166,7 +1166,7 @@ describe('render()', () => {
 
 		let updateParent;
 		function Parent() {
-			updateParent = () => this.forceUpdate();
+			updateParent = () => this.$update();
 			i++;
 			return <Child i={i} />;
 		}

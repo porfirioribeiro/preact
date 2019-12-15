@@ -3,6 +3,25 @@ import { diff, commitRoot } from './diff/index';
 import options from './options';
 import { Fragment } from './create-element';
 
+export function CoreComponent(props, context) {
+	this.props = props;
+	this.context = context;
+}
+
+// preact core will handle also this 2 methods
+// CoreComponent.prototype.$render
+// CoreComponent.prototype.componentWillUnmount
+
+/**
+ * Immediately perform a synchronous re-render of the component
+ * @param {() => void} [callback] A function to be called after component is
+ * re-rendered
+ */
+CoreComponent.prototype.$update = function(callback) {
+	if (callback) this._renderCallbacks.push(callback);
+	enqueueRender(this);
+};
+
 /**
  * Base Component class. Provides `setState()` and `forceUpdate()`, which
  * trigger rendering
@@ -14,6 +33,91 @@ export function Component(props, context) {
 	this.props = props;
 	this.context = context;
 }
+
+Component.prototype.$render = function(newProps, cctx) {
+	let c, isNew, oldProps, oldState, snapshot, tmp;
+	c = this;
+	let newType = this.constructor;
+
+	if (!c._vnode) {
+		c.props = newProps;
+		if (!c.state) c.state = {};
+		c.context = cctx;
+		isNew = true;
+	}
+
+	// Invoke getDerivedStateFromProps
+	if (c._nextState == null) {
+		c._nextState = c.state;
+	}
+	if (newType.getDerivedStateFromProps != null) {
+		if (c._nextState == c.state) {
+			c._nextState = assign({}, c._nextState);
+		}
+
+		assign(
+			c._nextState,
+			newType.getDerivedStateFromProps(newProps, c._nextState)
+		);
+	}
+
+	oldProps = c.props;
+	oldState = c.state;
+
+	// Invoke pre-render lifecycle methods
+	if (isNew) {
+		if (
+			newType.getDerivedStateFromProps == null &&
+			c.componentWillMount != null
+		) {
+			c.componentWillMount();
+		}
+
+		if (c.componentDidMount != null) {
+			c._renderCallbacks.push(c.componentDidMount);
+		}
+	} else {
+		if (
+			newType.getDerivedStateFromProps == null &&
+			c._force == null &&
+			c.componentWillReceiveProps != null
+		) {
+			c.componentWillReceiveProps(newProps, cctx);
+		}
+
+		if (
+			!c._force &&
+			c.shouldComponentUpdate != null &&
+			c.shouldComponentUpdate(newProps, c._nextState, cctx) === false
+		) {
+			c.props = newProps;
+			c.state = c._nextState;
+			throw c;
+		}
+
+		if (c.componentWillUpdate != null) {
+			c.componentWillUpdate(newProps, c._nextState, cctx);
+		}
+
+		if (c.componentDidUpdate != null) {
+			c._renderCallbacks.push(() => {
+				c.componentDidUpdate(oldProps, oldState, snapshot);
+			});
+		}
+	}
+
+	c.context = cctx;
+	c.props = newProps;
+	c.state = c._nextState;
+
+	tmp = c.render(c.props, c.state, c.context);
+
+	if (!isNew && c.getSnapshotBeforeUpdate != null) {
+		snapshot = c.getSnapshotBeforeUpdate(oldProps, oldState);
+	}
+
+	return tmp;
+};
 
 /**
  * Update component state and schedule a re-render.
