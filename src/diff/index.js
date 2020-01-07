@@ -122,7 +122,8 @@ export function diff(
 				if (
 					!c._force &&
 					c.shouldComponentUpdate != null &&
-					c.shouldComponentUpdate(newProps, c._nextState, cctx) === false
+					c.shouldComponentUpdate(newProps, c._nextState, cctx, newVNode) ===
+						false
 				) {
 					c.props = newProps;
 					c.state = c._nextState;
