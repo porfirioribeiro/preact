@@ -1,17 +1,44 @@
 import { Component } from 'preact';
 import { assign } from '../../src/util';
 
-/** @type {import('./internal').Component} */
+/** @typedef {import('./internal').Component} CompositionComponent */
+/** @type {CompositionComponent} */
 let currentComponent;
 
 const $Reactive = Symbol('reactive');
+
+/** @this {CompositionComponent} */
+function _afterRender() {
+	// handle all `effect`s
+	this.__compositions.e.some(up => {
+		handleEffect(up, this);
+	});
+}
+
+/** @this {CompositionComponent} */
+function _unmount() {
+	// cleanup `effect`s onCleanup
+	this.__compositions.e.some(cleanupEffect);
+	// call all onUnmounted lifecycle callbacks
+	this.__compositions.u.some(f => {
+		f();
+	});
+}
 
 export function createComponent(setupFn) {
 	function CompositionComponent() {}
 
 	// @ts-ignore
-	const cp = (CompositionComponent.prototype = new Component());
-	cp.componentWillMount = function() {
+	assign((CompositionComponent.prototype = new Component()), {
+		componentWillMount: _initComposition,
+		componentDidMount: _afterRender,
+		componentDidUpdate: _afterRender,
+		componentWillUnmount: _unmount
+	});
+
+	/** @this {CompositionComponent} */
+	function _initComposition() {
+		/** @type {CompositionComponent} */
 		const c = (currentComponent = this);
 		c.__compositions = { u: [], w: [], e: [], x: {} };
 		const render = setupFn(c);
@@ -28,25 +55,8 @@ export function createComponent(setupFn) {
 
 			return render(props, ref);
 		};
-	};
+	}
 
-	cp.componentDidMount = cp.componentDidUpdate = function() {
-		const c = this;
-		// handle all `effect`s
-		c.__compositions.e.some(up => {
-			handleEffect(up, c);
-		});
-	};
-	cp.componentWillUnmount = function() {
-		const c = this;
-
-		// cleanup `effect`s onCleanup
-		c.__compositions.e.some(cleanupEffect);
-		// call all onUnmounted lifecycle callbacks
-		c.__compositions.u.some(f => {
-			f();
-		});
-	};
 	return CompositionComponent;
 }
 
@@ -198,6 +208,7 @@ function handleEffect(up, c) {
 		up.args = newArgs;
 
 		if (watcher) {
+			// comes from watch()
 			const value = up.cb
 				? srcIsArray
 					? up.cb(...newArgs)
@@ -211,6 +222,7 @@ function handleEffect(up, c) {
 				});
 			else watcher.value = value;
 		} else {
+			// comes from effect()
 			cleanupEffect(up);
 			if (up.cb) up.cb(newArgs, oldArgs, /* onCleanup */ cl => (up.cl = cl));
 		}
