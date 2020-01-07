@@ -56,7 +56,7 @@ describe('memo', () => {
 		expect(comparer).to.be.calledWith({ a: 1 }, { a: 2 });
 	});
 
-	it.only('memoize shallow props and ref', () => {
+	it('memoize shallow props and ref', () => {
 		const renders = sinon.spy();
 		const Comp = createComponent(() => {
 			memo();
@@ -68,10 +68,20 @@ describe('memo', () => {
 		render(<Comp ref={fnref1} />, scratch);
 		render(<Comp ref={fnref1} />, scratch);
 
-		expect(renders).to.be.calledOnce;
+		expect(renders).to.be.calledOnce.and.to.be.calledWith(fnref1);
 
-		// render(<Comp a={2} />, scratch);
+		render(<Comp ref={fnref1} a={2} />, scratch);
+		render(<Comp ref={fnref1} a={2} />, scratch);
+		expect(renders).to.be.calledTwice.and.to.be.calledWith(fnref1);
 
-		// expect(renders).to.be.calledTwice;
+		render(<Comp ref={fnref2} a={2} />, scratch);
+		render(<Comp ref={fnref2} a={2} />, scratch);
+		expect(renders).to.be.calledThrice.and.to.be.calledWith(fnref2);
+
+		render(<Comp a={2} />, scratch);
+		render(<Comp a={2} />, scratch);
+		expect(renders)
+			.to.be.callCount(4)
+			.and.to.be.calledWith(undefined);
 	});
 });

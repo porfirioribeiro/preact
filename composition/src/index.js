@@ -1,28 +1,13 @@
-import { options, Component } from 'preact';
+import { Component } from 'preact';
 import { assign } from '../../src/util';
 
 /** @type {import('./internal').Component} */
 let currentComponent;
 
-// let oldVNodeHook = options.vnode;
-// options.vnode = vnode => {
-// 	let type = vnode.type;
-// 	// Update the ref to forward
-// 	if (type && type.__compositions && vnode.ref) {
-// 		vnode.props.ref = vnode.ref;
-// 		vnode._ref = vnode.ref;
-// 		// console.log(vnode.ref);
-// 		vnode.ref = null;
-
-// 	}
-
-// 	if (oldVNodeHook) oldVNodeHook(vnode);
-// };
-
 const $Reactive = Symbol('reactive');
 
 export function createComponent(setupFn) {
-	function CompositionComponent(initialProps) {}
+	function CompositionComponent() {}
 
 	// @ts-ignore
 	const cp = (CompositionComponent.prototype = new Component());
@@ -31,21 +16,16 @@ export function createComponent(setupFn) {
 		c.__compositions = { u: [], w: [], e: [], x: {} };
 		const render = setupFn(c);
 
-		c.render = function(props, state, context) {
+		c.render = function(props) {
 			// call all watch
 			c.__compositions.w.some(up => {
 				handleEffect(up, c);
 			});
 
-			// if (!props.ref) return render(props);
-			// let clone = assign({}, props);
-			// delete clone.ref;
-			// return render(clone, props.ref);
-
-			console.log('render', this._vnode.ref);
-
-			const ref = (c._ref = c._vnode.ref);
+			// get the ref and remove it from vnode
+			const ref = (c.__compositions.r = c._vnode.ref);
 			c._vnode.ref = null;
+
 			return render(props, ref);
 		};
 	};
@@ -67,15 +47,20 @@ export function createComponent(setupFn) {
 			f();
 		});
 	};
-	CompositionComponent.__compositions = true;
 	return CompositionComponent;
 }
 
 export function memo(comparer) {
-	currentComponent.shouldComponentUpdate = function(nextProps) {
-		console.log('sCU', this._vnode.ref, this._ref);
-
-		return (comparer || shallowDiffers)(this.props, nextProps);
+	currentComponent.shouldComponentUpdate = function(
+		nextProps,
+		_ns,
+		_nc,
+		newVNode
+	) {
+		return (
+			newVNode.ref !== this.__compositions.r ||
+			(comparer || shallowDiffers)(this.props, nextProps)
+		);
 	};
 }
 

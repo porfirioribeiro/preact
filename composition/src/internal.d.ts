@@ -34,6 +34,6 @@ export interface ComponentComposition {
 }
 
 export interface Component extends PreactComponent<any, any> {
-	constructor: { (c: Component): any; __compositions?: boolean };
+	constructor: { (c: Component): any };
 	__compositions?: ComponentComposition;
 }
