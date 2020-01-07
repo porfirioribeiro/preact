@@ -122,7 +122,8 @@ export function diff(
 				if (
 					!c._force &&
 					c.shouldComponentUpdate != null &&
-					c.shouldComponentUpdate(newProps, c._nextState, cctx) === false
+					c.shouldComponentUpdate(newProps, c._nextState, cctx, newVNode) ===
+						false
 				) {
 					c.props = newProps;
 					c.state = c._nextState;
@@ -406,8 +407,7 @@ export function unmount(vnode, parentVNode, skipRemove) {
 	if (options.unmount) options.unmount(vnode);
 
 	if ((r = vnode.ref)) {
-		if (!r.current || r.current === vnode._dom)
-			applyRef(r, null, parentVNode);
+		if (!r.current || r.current === vnode._dom) applyRef(r, null, parentVNode);
 	}
 
 	let dom;
