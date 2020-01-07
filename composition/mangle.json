@@ -12,6 +12,7 @@
       "$_value": "__v",
       "$_defaultValue": "__p",
       "$_id": "__c",
+      "$_vnode": "__v",
       "$_parentDom": "__P",
       "$_root": "__p",
       "$_diff": "__b",
