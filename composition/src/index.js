@@ -1,11 +1,15 @@
 import { Component } from 'preact';
 import { assign } from '../../src/util';
+import { createStore } from './store';
+
+export { createStore } from './store';
 
 /** @typedef {import('./internal').Component} CompositionComponent */
 /** @type {CompositionComponent} */
 let currentComponent;
 
-const $Reactive = Symbol('reactive');
+const $Reactive = Symbol();
+const $Store = Symbol();
 
 /** @this {CompositionComponent} */
 function _afterRender() {
@@ -55,6 +59,7 @@ export function createComponent(setupFn) {
 
 			return render(props, ref);
 		};
+		currentComponent = null;
 	}
 
 	return CompositionComponent;
@@ -125,67 +130,59 @@ export function inject(name, defaultValue) {
 	return src;
 }
 
-export function reactive(value) {
-	let x = value;
-	const c = currentComponent;
+export function reactive(v) {
+	const rv = value(v);
+	const $value = Object.getOwnPropertyDescriptor(rv, $Reactive);
+	delete rv.value;
+	const properties = { $value };
 
-	const reactiveProperty = {
-		get() {
-			return x;
-		},
-		set(v) {
-			x = v;
-			c.forceUpdate();
-		}
-	};
-	return Object.defineProperties(
-		{},
-		Object.keys(value).reduce(
-			(acc, key) =>
-				assign(acc, {
-					[key]: {
-						enumerable: true,
-						get() {
-							return x[key];
-						},
-						set(v) {
-							if (v !== x[key]) {
-								x = assign({}, x);
-								x[key] = v;
-								c.forceUpdate();
-							}
-						}
-					}
-				}),
-			{
-				[$Reactive]: reactiveProperty,
-				$value: reactiveProperty
+	Object.keys(v).forEach(key => {
+		properties[key] = _propDescriptor(
+			function() {
+				return $value.get()[key];
+			},
+			function(newValue) {
+				let x = $value.get();
+				if (newValue !== x[key]) {
+					x = assign({}, x);
+					x[key] = newValue;
+					$value.set(x);
+				}
 			}
-		)
-	);
+		);
+	});
+	return Object.defineProperties(rv, properties);
 }
 
-export function value(v) {
+export function value(v, { readonly } = {}) {
 	const c = currentComponent;
+
+	const store = createStore(v);
+	const set = readonly ? undefined : store.set;
+	onUnmounted(
+		store.subscribe(newValue => {
+			if (v !== newValue) {
+				v = newValue;
+				c.forceUpdate();
+			}
+		})
+	);
 	function get() {
 		return v;
 	}
+
 	return Object.defineProperties(
 		{},
 		{
-			[$Reactive]: { get },
-			value: {
-				get,
-				set(newValue) {
-					if (v !== newValue) {
-						v = newValue;
-						c.forceUpdate();
-					}
-				},
-				enumerable: true
-			}
+			[$Reactive]: { get, set },
+			[$Store]: { value: store },
+			value: _propDescriptor(get, set)
 		}
 	);
+}
+
+function _propDescriptor(get, set) {
+	return { get, set, enumerable: true, configurable: true };
 }
 
 export function unwrap(v) {
