@@ -31,7 +31,7 @@ export function createStore(value) {
 	return { set, update, subscribe };
 }
 
-export function subscribe(store, callback) {
+export function subscribeTo(store, callback) {
 	const unsub = store.subscribe(callback);
 	return unsub.unsubscribe ? () => unsub.unsubscribe() : unsub;
 }

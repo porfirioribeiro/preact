@@ -42,7 +42,7 @@ describe('watch', () => {
 		expect(memoFunction).to.have.been.calledTwice;
 	});
 
-	it('unwrap and check reactivity', () => {
+	it.skip('unwrap and check reactivity', () => {
 		const Comp = createComponent(() => {
 			const sum = watch(props => props.a + props.b);
 

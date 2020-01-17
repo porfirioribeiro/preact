@@ -1,10 +1,13 @@
 import { Component } from 'preact';
 import { assign } from '../../src/util';
-import { createStore } from './store';
+import { createStore, subscribeTo, readable } from './store';
 
 export { createStore } from './store';
 
-/** @typedef {import('./internal').Component} CompositionComponent */
+/**
+ * @typedef {import('./internal').Component} CompositionComponent
+ * @typedef {import('./internal').Watcher} Watcher
+ */
 /** @type {CompositionComponent} */
 let currentComponent;
 
@@ -14,19 +17,25 @@ const $Store = Symbol();
 /** @this {CompositionComponent} */
 function _afterRender() {
 	// handle all `effect`s
-	this.__compositions.e.some(up => {
-		handleEffect(up, this);
-	});
+	var effect;
+	while ((effect = this.__compositions._effects.pop())) {
+		cleanupEffect(effect);
+		effect._onCleanup;
+		effect._callback(
+			effect._value,
+			effect._oldValue,
+			/* onCleanup */ cl => (effect._onCleanup = cl)
+		);
+		effect._oldValue = effect._isArray ? effect._value.slice() : effect._value;
+	}
 }
 
 /** @this {CompositionComponent} */
 function _unmount() {
 	// cleanup `effect`s onCleanup
-	this.__compositions.e.some(cleanupEffect);
+	this.__compositions._cleanup.some(cleanupEffect);
 	// call all onUnmounted lifecycle callbacks
-	this.__compositions.u.some(f => {
-		f();
-	});
+	this.__compositions._unmounts.some(callArg);
 }
 
 export function createComponent(setupFn) {
@@ -36,6 +45,7 @@ export function createComponent(setupFn) {
 	assign((CompositionComponent.prototype = new Component()), {
 		componentWillMount: _initComposition,
 		componentDidMount: _afterRender,
+		// componentWillUpdate: _preUpdate,
 		componentDidUpdate: _afterRender,
 		componentWillUnmount: _unmount
 	});
@@ -44,25 +54,57 @@ export function createComponent(setupFn) {
 	function _initComposition() {
 		/** @type {CompositionComponent} */
 		const c = (currentComponent = this);
-		c.__compositions = { u: [], w: [], e: [], x: {} };
+		let init;
+		c.__compositions = {
+			_unmounts: [],
+			_contexts: {},
+			_prerender: [],
+			_watchers: [],
+			_effects: [],
+			_cleanup: []
+		};
 		const render = setupFn(c);
 
 		c.render = function(props) {
-			// call all watch
-			c.__compositions.w.some(up => {
-				handleEffect(up, c);
-			});
-
+			if (init) {
+				c.__compositions._prerender.some(callArg);
+				_handleWatchers(c);
+			}
 			// get the ref and remove it from vnode
-			const ref = (c.__compositions.r = c._vnode.ref);
+			const ref = (c.__compositions._ref = c._vnode.ref);
 			c._vnode.ref = null;
 
+			init = true;
 			return render(props, ref);
 		};
 		currentComponent = null;
 	}
 
 	return CompositionComponent;
+}
+
+/** @param {CompositionComponent} c */
+function _handleWatchers(c) {
+	var watcher;
+	while ((watcher = c.__compositions._watchers.pop())) {
+		const value = watcher._callback
+			? watcher._callback.apply(
+					null,
+					watcher._isArray ? watcher._value : [watcher._value]
+			  )
+			: watcher._value;
+
+		const store = watcher._store;
+		if (isPromise(value)) {
+			value.then(v => {
+				store.set(v);
+				c.forceUpdate();
+			});
+		} else store.set(value);
+		watcher._oldValue = watcher._isArray
+			? watcher._value.slice()
+			: watcher._value;
+	}
 }
 
 export function memo(comparer) {
@@ -73,27 +115,97 @@ export function memo(comparer) {
 		newVNode
 	) {
 		return (
-			newVNode.ref !== this.__compositions.r ||
+			newVNode.ref !== this.__compositions._ref ||
 			(comparer || shallowDiffers)(this.props, nextProps)
 		);
 	};
 }
 
 export function watch(src, cb, dv) {
-	const vr = { value: dv };
-	Object.defineProperty(vr, $Reactive, {
-		get() {
-			return this.value;
-		}
-	});
-	const up = { src, cb, vr };
-	handleEffect(up, currentComponent);
-	currentComponent.__compositions.w.push(up);
+	const c = currentComponent;
+	const srcIsArray = Array.isArray(src);
+	const vr = value(dv, true, false);
+	const store = vr[$Store];
+
+	/** @type {Watcher} */
+	const watcher = {
+		_isArray: srcIsArray,
+		_value: srcIsArray ? [] : null,
+		_oldValue: srcIsArray ? [] : null,
+		_callback: cb,
+		_store: store
+	};
+
+	srcIsArray
+		? src.forEach((s, i) => toValue(watcher, c.__compositions._watchers, s, i))
+		: toValue(watcher, c.__compositions._watchers, src);
+
+	_handleWatchers(c);
 	return vr;
 }
 
 export function effect(src, cb) {
-	currentComponent.__compositions.e.push({ src, cb });
+	const c = currentComponent;
+	const srcIsArray = Array.isArray(src);
+
+	/** @type {Watcher} */
+	const watcher = {
+		_value: srcIsArray ? [] : null,
+		_oldValue: srcIsArray ? [] : null,
+		_isArray: srcIsArray,
+		_callback: cb
+	};
+
+	srcIsArray
+		? src.forEach((s, i) => toValue(watcher, c.__compositions._effects, s, i))
+		: toValue(watcher, c.__compositions._effects, src);
+}
+
+/**
+ * @this {import('./internal').Watcher}
+ * @param {*} src
+ * @param {Watcher} watcher
+ * @param {Watcher[]} watcherList
+ * @param {*} [i]
+ */
+function toValue(watcher, watcherList, src, i) {
+	const callback = v => {
+		i == undefined ? (watcher._value = v) : (watcher._value[i] = v);
+		if (watcherList.indexOf(watcher) < 0) watcherList.push(watcher);
+	};
+	const c = currentComponent;
+
+	if (src) {
+		let tmp, value;
+		const isFunc = typeof src === 'function';
+		const isContext = src.Provider;
+		// use the value from a getter function
+		// unrap the value and subscribe to the context
+		if (isFunc || isContext) {
+			if (isContext) {
+				const id = src._id;
+				const provider = c.context[id];
+				if (provider && !c.__compositions._contexts[id]) {
+					provider.sub(c);
+					c.__compositions._contexts[id] = src;
+				}
+			}
+			const prerender = () => {
+				const v = isContext
+					? (tmp = c.context[src._id])
+						? tmp.props.value
+						: src._defaultValue
+					: src(c.props);
+
+				if (v !== value) callback((value = v));
+			};
+			prerender();
+			return c.__compositions._prerender.push(prerender);
+		}
+		// unwrap value or reactive, returning their immutable value
+		else if (trySubscribe(src, callback)) return;
+	}
+	callback(src);
 }
 
 export function onMounted(cb) {
@@ -101,33 +213,33 @@ export function onMounted(cb) {
 }
 
 export function onUnmounted(cb) {
-	currentComponent.__compositions.u.push(cb);
+	currentComponent.__compositions._unmounts.push(cb);
 }
 
 export function provide(name, _value) {
 	const c = currentComponent;
-	if (!c.__compositions.c) {
-		c.__compositions.c = {};
-		c.getChildContext = () => c.__compositions.c;
+	if (!c.__compositions._providers) {
+		c.__compositions._providers = {};
+		c.getChildContext = () => c.__compositions._providers;
 	}
-	c.__compositions.c[`__sC_${name}`] = { _component: c, _value };
+	c.__compositions._providers[`__sC_${name}`] = { _component: c, _value };
 }
 
 export function inject(name, defaultValue) {
 	const c = currentComponent;
-
 	const ctx = c.context[`__sC_${name}`];
-	if (!ctx) return defaultValue;
+	const src = ctx ? ctx._value : defaultValue;
 
-	const src = ctx._value;
-
-	if (isReactive(src))
-		ctx._component.__compositions.w.push({
-			src,
-			cb: () => c.forceUpdate()
-		});
+	trySubscribe(src, () => c.forceUpdate());
 
 	return src;
+}
+
+function trySubscribe(src, callback, tmp) {
+	if ((tmp = src[$Store]) || (tmp = src.subscribe && src)) {
+		onUnmounted(subscribeTo(tmp, callback));
+		return true;
+	}
 }
 
 export function reactive(v) {
@@ -154,16 +266,20 @@ export function reactive(v) {
 	return Object.defineProperties(rv, properties);
 }
 
-export function value(v, { readonly } = {}) {
-	const c = currentComponent;
-
+/**
+ *
+ * @param {any} v
+ * @param {boolean|undefined} [readonly]
+ * @param {CompositionComponent|false|undefined} [c]
+ */
+export function value(v, readonly, c = currentComponent) {
 	const store = createStore(v);
 	const set = readonly ? undefined : store.set;
 	onUnmounted(
 		store.subscribe(newValue => {
 			if (v !== newValue) {
 				v = newValue;
-				c.forceUpdate();
+				if (c) c.forceUpdate();
 			}
 		})
 	);
@@ -193,70 +309,16 @@ export function isReactive(v) {
 	return typeof v === 'object' && !!v && $Reactive in v;
 }
 
-function handleEffect(up, c) {
-	const srcIsArray = Array.isArray(up.src);
-	const watcher = up.vr;
-	const oldArgs = up.args;
-	const newArgs = srcIsArray
-		? up.src.reduce((acc, s) => (acc.push(resolveArgs(s, c)), acc), [])
-		: resolveArgs(up.src, c);
-
-	if (srcIsArray ? argsChanged(oldArgs, newArgs) : oldArgs !== newArgs) {
-		up.args = newArgs;
-
-		if (watcher) {
-			// comes from watch()
-			const value = up.cb
-				? srcIsArray
-					? up.cb(...newArgs)
-					: up.cb(newArgs)
-				: newArgs;
-
-			if (isPromise(value))
-				value.then(v => {
-					watcher.value = v;
-					c.forceUpdate();
-				});
-			else watcher.value = value;
-		} else {
-			// comes from effect()
-			cleanupEffect(up);
-			if (up.cb) up.cb(newArgs, oldArgs, /* onCleanup */ cl => (up.cl = cl));
-		}
+/** @param {Watcher} effect */
+function cleanupEffect(effect) {
+	if (effect._onCleanup) {
+		effect._onCleanup();
+		effect._onCleanup = undefined;
 	}
 }
 
-function cleanupEffect(up) {
-	if (up.cl) {
-		up.cl();
-		up.cl = undefined;
-	}
-}
-
-function resolveArgs(src, c) {
-	if (src) {
-		// use the value from a getter function
-		if (typeof src === 'function') return src(c.props);
-		// unrap the value and subscribe to the context
-		if (src.Provider) return resolveContext(src, c);
-		// unwrap value or reactive, returning their immutable value
-		if (isReactive(src)) return src[$Reactive];
-	}
-	return src;
-}
-
-function resolveContext(context, c) {
-	const id = context._id;
-	const provider = c.context[id];
-	if (provider && !c.__compositions.x[id]) {
-		provider.sub(c);
-		c.__compositions.x[id] = context;
-	}
-	return provider ? provider.props.value : context._defaultValue;
-}
-
-function argsChanged(oldArgs, newArgs) {
-	return !oldArgs || newArgs.some((arg, index) => arg !== oldArgs[index]);
+function callArg(f) {
+	f();
 }
 
 /**
