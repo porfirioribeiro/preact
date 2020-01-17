@@ -1,6 +1,6 @@
 import { Component } from 'preact';
 import { assign } from '../../src/util';
-import { createStore, subscribeTo, readable } from './store';
+import { createStore } from './store';
 
 export { createStore } from './store';
 
@@ -20,11 +20,10 @@ function _afterRender() {
 	var effect;
 	while ((effect = this.__compositions._effects.pop())) {
 		cleanupEffect(effect);
-		effect._onCleanup;
 		effect._callback(
 			effect._value,
 			effect._oldValue,
-			/* onCleanup */ cl => (effect._onCleanup = cl)
+			onCleanup => (effect._onCleanup = onCleanup)
 		);
 		effect._oldValue = effect._isArray ? effect._value.slice() : effect._value;
 	}
@@ -32,10 +31,8 @@ function _afterRender() {
 
 /** @this {CompositionComponent} */
 function _unmount() {
-	// cleanup `effect`s onCleanup
+	// cleanup `effect`s onCleanup and call all onUnmounted lifecycle callbacks
 	this.__compositions._cleanup.some(cleanupEffect);
-	// call all onUnmounted lifecycle callbacks
-	this.__compositions._unmounts.some(callArg);
 }
 
 export function createComponent(setupFn) {
@@ -45,7 +42,6 @@ export function createComponent(setupFn) {
 	assign((CompositionComponent.prototype = new Component()), {
 		componentWillMount: _initComposition,
 		componentDidMount: _afterRender,
-		// componentWillUpdate: _preUpdate,
 		componentDidUpdate: _afterRender,
 		componentWillUnmount: _unmount
 	});
@@ -56,7 +52,6 @@ export function createComponent(setupFn) {
 		const c = (currentComponent = this);
 		let init;
 		c.__compositions = {
-			_unmounts: [],
 			_contexts: {},
 			_prerender: [],
 			_watchers: [],
@@ -95,7 +90,8 @@ function _handleWatchers(c) {
 			: watcher._value;
 
 		const store = watcher._store;
-		if (isPromise(value)) {
+		if (value && value.then) {
+			// the value is a promise
 			value.then(v => {
 				store.set(v);
 				c.forceUpdate();
@@ -122,43 +118,33 @@ export function memo(comparer) {
 }
 
 export function watch(src, cb, dv) {
-	const c = currentComponent;
-	const srcIsArray = Array.isArray(src);
 	const vr = value(dv, true, false);
-	const store = vr[$Store];
-
-	/** @type {Watcher} */
-	const watcher = {
-		_isArray: srcIsArray,
-		_value: srcIsArray ? [] : null,
-		_oldValue: srcIsArray ? [] : null,
-		_callback: cb,
-		_store: store
-	};
-
-	srcIsArray
-		? src.forEach((s, i) => toValue(watcher, c.__compositions._watchers, s, i))
-		: toValue(watcher, c.__compositions._watchers, src);
-
-	_handleWatchers(c);
+	_createWatcher(
+		currentComponent.__compositions._watchers,
+		src,
+		cb,
+		vr[$Store]
+	);
+	_handleWatchers(currentComponent);
 	return vr;
 }
 
 export function effect(src, cb) {
-	const c = currentComponent;
-	const srcIsArray = Array.isArray(src);
+	_createWatcher(currentComponent.__compositions._effects, src, cb);
+}
 
+function _createWatcher(lifecycleList, src, cb, store) {
+	const srcIsArray = Array.isArray(src);
 	/** @type {Watcher} */
 	const watcher = {
-		_value: srcIsArray ? [] : null,
-		_oldValue: srcIsArray ? [] : null,
 		_isArray: srcIsArray,
-		_callback: cb
+		_value: srcIsArray ? [] : null,
+		_callback: cb,
+		_store: store
 	};
-
 	srcIsArray
-		? src.forEach((s, i) => toValue(watcher, c.__compositions._effects, s, i))
-		: toValue(watcher, c.__compositions._effects, src);
+		? src.forEach((s, i) => toValue(watcher, lifecycleList, s, i))
+		: toValue(watcher, lifecycleList, src);
 }
 
 /**
@@ -213,7 +199,7 @@ export function onMounted(cb) {
 }
 
 export function onUnmounted(cb) {
-	currentComponent.__compositions._unmounts.push(cb);
+	currentComponent.__compositions._cleanup.push({ _onCleanup: cb });
 }
 
 export function provide(name, _value) {
@@ -237,14 +223,16 @@ export function inject(name, defaultValue) {
 
 function trySubscribe(src, callback, tmp) {
 	if ((tmp = src[$Store]) || (tmp = src.subscribe && src)) {
-		onUnmounted(subscribeTo(tmp, callback));
+		const unsub = tmp.subscribe(callback);
+		onUnmounted(unsub.unsubscribe ? () => unsub.unsubscribe() : unsub);
 		return true;
 	}
 }
 
 export function reactive(v) {
 	const rv = value(v);
-	const $value = Object.getOwnPropertyDescriptor(rv, $Reactive);
+	const $value = rv[$Store];
+
 	delete rv.value;
 	const properties = { $value };
 
@@ -275,22 +263,19 @@ export function reactive(v) {
 export function value(v, readonly, c = currentComponent) {
 	const store = createStore(v);
 	const set = readonly ? undefined : store.set;
-	onUnmounted(
-		store.subscribe(newValue => {
-			if (v !== newValue) {
-				v = newValue;
-				if (c) c.forceUpdate();
-			}
-		})
-	);
-	function get() {
-		return v;
+	const get = store.get;
+	if (c) {
+		onUnmounted(
+			store.subscribe(() => {
+				c.forceUpdate();
+			})
+		);
 	}
 
 	return Object.defineProperties(
 		{},
 		{
-			[$Reactive]: { get, set },
+			[$Reactive]: store,
 			[$Store]: { value: store },
 			value: _propDescriptor(get, set)
 		}
@@ -331,12 +316,4 @@ function shallowDiffers(a, b) {
 	for (let i in a) if (i !== '__source' && !(i in b)) return true;
 	for (let i in b) if (i !== '__source' && a[i] !== b[i]) return true;
 	return false;
-}
-
-function isPromise(obj) {
-	return (
-		!!obj &&
-		(typeof obj === 'object' || typeof obj === 'function') &&
-		typeof obj.then === 'function'
-	);
 }

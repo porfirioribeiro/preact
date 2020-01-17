@@ -9,6 +9,9 @@ export function readable(value) {
 
 export function createStore(value) {
 	const subscribers = [];
+	function get() {
+		return value;
+	}
 	function set(newValue) {
 		if (value != value ? newValue == newValue : value !== newValue) {
 			value = newValue;
@@ -28,10 +31,10 @@ export function createStore(value) {
 			if (index !== -1) subscribers.splice(index, 1);
 		};
 	}
-	return { set, update, subscribe };
+	return { get, set, update, subscribe };
 }
 
-export function subscribeTo(store, callback) {
-	const unsub = store.subscribe(callback);
-	return unsub.unsubscribe ? () => unsub.unsubscribe() : unsub;
-}
+// export function subscribeTo(store, callback) {
+// 	const unsub = store.subscribe(callback);
+// 	return unsub.unsubscribe ? () => unsub.unsubscribe() : unsub;
+// }

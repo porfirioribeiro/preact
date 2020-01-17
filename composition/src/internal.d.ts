@@ -19,7 +19,7 @@ type OldWatcher = {
 };
 
 export type Watcher = {
-	_isArray: boolean;
+	_isArray?: boolean;
 	_value?: any | any[];
 	_oldValue?: any | any[];
 	/** callback to call whenever src change */
@@ -31,8 +31,6 @@ export type Watcher = {
 export interface ComponentComposition {
 	/** list of prerender callbacks */
 	_prerender: (() => void)[];
-	/** list of unmount callbacks */
-	_unmounts: (() => void)[];
 	/** record of contexts connected via watch */
 	_contexts: Record<string, PreactContext>;
 	/** record of contexts provided by this component */
