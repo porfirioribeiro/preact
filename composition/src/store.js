@@ -1,11 +1,7 @@
 /**
- * Inspired on svelte stores
+ * Inspired and adapted from svelte stores
  * https://github.com/sveltejs/svelte/blob/master/src/runtime/store/index.ts
  */
-
-export function readable(value) {
-	return { subscribe: createStore(value).subscribe };
-}
 
 export function createStore(value, start = noop) {
 	const subscribers = [];
