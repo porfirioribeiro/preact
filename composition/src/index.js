@@ -11,7 +11,6 @@ export { createStore } from './store';
 /** @type {CompositionComponent} */
 let currentComponent;
 
-const $Reactive = Symbol();
 const $Store = Symbol();
 
 /** @this {CompositionComponent} */
@@ -279,7 +278,6 @@ export function value(v, readonly, c = currentComponent) {
 	return Object.defineProperties(
 		{},
 		{
-			[$Reactive]: store,
 			[$Store]: { value: store },
 			value: _propDescriptor(get, set)
 		}
@@ -291,11 +289,14 @@ function _propDescriptor(get, set) {
 }
 
 export function unwrap(v) {
-	return isReactive(v) ? v[$Reactive] : v;
+	let _store;
+	return v && ((_store = v[$Store]) || (_store = v.subscribe && v.get && v))
+		? _store.get()
+		: v;
 }
 
 export function isReactive(v) {
-	return typeof v === 'object' && !!v && $Reactive in v;
+	return !!(v && (v[$Store] || (v.subscribe && v.get)));
 }
 
 /** @param {Watcher} effect */
