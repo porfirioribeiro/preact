@@ -53,7 +53,7 @@ export function createComponent(setupFn) {
 			_effects: [],
 			_cleanup: [],
 			_update: () => {
-				c.forceUpdate();
+				if (init) c.forceUpdate();
 			}
 		};
 		const render = setupFn(c);
@@ -154,11 +154,14 @@ function _createWatcher(lifecycleList, src, cb, store) {
 function toValue(watcher, lifecycleList, src, i) {
 	const c = currentComponent;
 
-	const callback = v => {
+	const callback = (v, noRerender) => {
 		//Set the value of this watcher
 		i == undefined ? (watcher._value = v) : (watcher._value[i] = v);
 		// add this watcher to the lifecyclelist to be processed, if not there yet
-		if (lifecycleList.indexOf(watcher) < 0) lifecycleList.push(watcher);
+		if (lifecycleList.indexOf(watcher) < 0) {
+			lifecycleList.push(watcher);
+			if (!noRerender) c.__compositions._update();
+		}
 		// add _afterRender to _renderCallbacks if this watcher is an `effect` and if not there yet
 		if (!watcher._store && c._renderCallbacks.indexOf(_afterRender) < 0)
 			c._renderCallbacks.push(_afterRender);
@@ -187,7 +190,7 @@ function toValue(watcher, lifecycleList, src, i) {
 						: src._defaultValue
 					: src(c.props);
 
-				if (v !== value) callback((value = v));
+				if (v !== value) callback((value = v), true);
 			};
 			prerender();
 			return c.__compositions._prerender.push(prerender);
@@ -271,9 +274,7 @@ export function value(v, readonly, c = currentComponent) {
 	const store = createStore(v);
 	const set = readonly ? undefined : store.set;
 	const get = store.get;
-	if (c) {
-		onUnmounted(store.subscribe(c.__compositions._update));
-	}
+	if (c) onUnmounted(store.subscribe(c.__compositions._update));
 
 	return Object.defineProperties(
 		{},
