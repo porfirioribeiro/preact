@@ -42,6 +42,7 @@ export interface ComponentComposition {
 	/** list of effects */
 	_effects: Watcher[];
 	_cleanup: Watcher[];
+	_update: () => void;
 }
 
 export interface Component extends PreactComponent<any, any> {

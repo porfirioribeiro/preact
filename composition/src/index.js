@@ -16,7 +16,7 @@ const $Store = Symbol();
 
 /** @this {CompositionComponent} */
 function _afterRender() {
-	// handle all `effect`s
+	// proccess all pending `effect`s
 	var effect;
 	while ((effect = this.__compositions._effects.pop())) {
 		cleanupEffect(effect);
@@ -39,12 +39,7 @@ export function createComponent(setupFn) {
 	function CompositionComponent() {}
 
 	// @ts-ignore
-	assign((CompositionComponent.prototype = new Component()), {
-		componentWillMount: _initComposition,
-		componentDidMount: _afterRender,
-		componentDidUpdate: _afterRender,
-		componentWillUnmount: _unmount
-	});
+	(CompositionComponent.prototype = new Component()).componentWillMount = _initComposition;
 
 	/** @this {CompositionComponent} */
 	function _initComposition() {
@@ -56,12 +51,16 @@ export function createComponent(setupFn) {
 			_prerender: [],
 			_watchers: [],
 			_effects: [],
-			_cleanup: []
+			_cleanup: [],
+			_update: () => {
+				c.forceUpdate();
+			}
 		};
 		const render = setupFn(c);
 
 		c.render = function(props) {
 			if (init) {
+				// we don't need to run this on the first render as it was already executed
 				c.__compositions._prerender.some(callArg);
 				_handleWatchers(c);
 			}
@@ -80,6 +79,7 @@ export function createComponent(setupFn) {
 
 /** @param {CompositionComponent} c */
 function _handleWatchers(c) {
+	// proccess all pending `watch`'s
 	var watcher;
 	while ((watcher = c.__compositions._watchers.pop())) {
 		const value = watcher._callback
@@ -92,10 +92,7 @@ function _handleWatchers(c) {
 		const store = watcher._store;
 		if (value && value.then) {
 			// the value is a promise
-			value.then(v => {
-				store.set(v);
-				c.forceUpdate();
-			});
+			value.then(store.set).then(c.__compositions._update);
 		} else store.set(value);
 		watcher._oldValue = watcher._isArray
 			? watcher._value.slice()
@@ -151,15 +148,21 @@ function _createWatcher(lifecycleList, src, cb, store) {
  * @this {import('./internal').Watcher}
  * @param {*} src
  * @param {Watcher} watcher
- * @param {Watcher[]} watcherList
+ * @param {Watcher[]} lifecycleList
  * @param {*} [i]
  */
-function toValue(watcher, watcherList, src, i) {
-	const callback = v => {
-		i == undefined ? (watcher._value = v) : (watcher._value[i] = v);
-		if (watcherList.indexOf(watcher) < 0) watcherList.push(watcher);
-	};
+function toValue(watcher, lifecycleList, src, i) {
 	const c = currentComponent;
+
+	const callback = v => {
+		//Set the value of this watcher
+		i == undefined ? (watcher._value = v) : (watcher._value[i] = v);
+		// add this watcher to the lifecyclelist to be processed, if not there yet
+		if (lifecycleList.indexOf(watcher) < 0) lifecycleList.push(watcher);
+		// add _afterRender to _renderCallbacks if this watcher is an `effect` and if not there yet
+		if (!watcher._store && c._renderCallbacks.indexOf(_afterRender) < 0)
+			c._renderCallbacks.push(_afterRender);
+	};
 
 	if (src) {
 		let tmp, value;
@@ -176,6 +179,7 @@ function toValue(watcher, watcherList, src, i) {
 					c.__compositions._contexts[id] = src;
 				}
 			}
+			// run this function before every render to check if prop/contect changed
 			const prerender = () => {
 				const v = isContext
 					? (tmp = c.context[src._id])
@@ -188,7 +192,7 @@ function toValue(watcher, watcherList, src, i) {
 			prerender();
 			return c.__compositions._prerender.push(prerender);
 		}
-		// unwrap value or reactive, returning their immutable value
+		// subscribe to a store or a store inside a value
 		else if (trySubscribe(src, callback)) return;
 	}
 	callback(src);
@@ -199,6 +203,9 @@ export function onMounted(cb) {
 }
 
 export function onUnmounted(cb) {
+	// add the _unmount lifecycle only when needed
+	if (!currentComponent.componentWillUnmount)
+		currentComponent.componentWillUnmount = _unmount;
 	currentComponent.__compositions._cleanup.push({ _onCleanup: cb });
 }
 
@@ -216,7 +223,7 @@ export function inject(name, defaultValue) {
 	const ctx = c.context[`__sC_${name}`];
 	const src = ctx ? ctx._value : defaultValue;
 
-	trySubscribe(src, () => c.forceUpdate());
+	trySubscribe(src, c.__compositions._update);
 
 	return src;
 }
@@ -265,11 +272,7 @@ export function value(v, readonly, c = currentComponent) {
 	const set = readonly ? undefined : store.set;
 	const get = store.get;
 	if (c) {
-		onUnmounted(
-			store.subscribe(() => {
-				c.forceUpdate();
-			})
-		);
+		onUnmounted(store.subscribe(c.__compositions._update));
 	}
 
 	return Object.defineProperties(
