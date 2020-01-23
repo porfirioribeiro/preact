@@ -316,6 +316,7 @@ function diffElementNodes(
 		}
 	} else if (newVNode !== oldVNode) {
 		if (excessDomChildren != null) {
+			excessDomChildren[excessDomChildren.indexOf(dom)] = null;
 			excessDomChildren = EMPTY_ARR.slice.call(dom.childNodes);
 		}
 
