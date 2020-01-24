@@ -1,4 +1,5 @@
 import { PreactContext, JSX, Component } from 'preact';
+export * from './store';
 
 type FC<P> = (props: P) => JSX.Element;
 
