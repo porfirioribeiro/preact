@@ -131,4 +131,38 @@ describe('watch', () => {
 
 		render(<Comp />, scratch);
 	});
+
+	it('watch with empty src', () => {
+		let memoFunction = sinon.spy(() => 123);
+		const Comp = createComponent(() => {
+			watch([], memoFunction);
+
+			return () => null;
+		});
+
+		render(<Comp />, scratch);
+
+		expect(memoFunction).to.be.calledOnce;
+	});
+
+	it('watch async with empty src', async () => {
+		function fetchData() {
+			return new Promise(resolve => setTimeout(() => resolve([1]), 1));
+		}
+
+		let data;
+		const Comp = createComponent(() => {
+			data = watch([], fetchData);
+
+			return () => null;
+		});
+
+		render(<Comp />, scratch);
+
+		expect(data.value).to.deep.equal();
+
+		await new Promise(resolve => setTimeout(resolve, 1));
+
+		expect(data.value).to.deep.equal([1]);
+	});
 });

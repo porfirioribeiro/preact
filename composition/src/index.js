@@ -139,7 +139,9 @@ function _createWatcher(lifecycleList, src, cb, store) {
 		_store: store
 	};
 	srcIsArray
-		? src.forEach((s, i) => toValue(watcher, lifecycleList, s, i))
+		? src.length
+			? src.forEach((s, i) => toValue(watcher, lifecycleList, s, i))
+			: _pushIfUniq(lifecycleList, watcher)
 		: toValue(watcher, lifecycleList, src);
 }
 
@@ -157,13 +159,11 @@ function toValue(watcher, lifecycleList, src, i) {
 		//Set the value of this watcher
 		i == undefined ? (watcher._value = v) : (watcher._value[i] = v);
 		// add this watcher to the lifecyclelist to be processed, if not there yet
-		if (lifecycleList.indexOf(watcher) < 0) {
-			lifecycleList.push(watcher);
-			if (!noRerender) c.__compositions._update();
-		}
+		if (_pushIfUniq(lifecycleList, watcher) && !noRerender)
+			c.__compositions._update();
+
 		// add _afterRender to _renderCallbacks if this watcher is an `effect` and if not there yet
-		if (!watcher._store && c._renderCallbacks.indexOf(_afterRender) < 0)
-			c._renderCallbacks.push(_afterRender);
+		if (!watcher._store) _pushIfUniq(c._renderCallbacks, _afterRender);
 	};
 
 	if (src) {
@@ -321,4 +321,14 @@ function shallowDiffers(a, b) {
 	for (let i in a) if (i !== '__source' && !(i in b)) return true;
 	for (let i in b) if (i !== '__source' && a[i] !== b[i]) return true;
 	return false;
+}
+
+/**
+ * @template T
+ * @param {T[]} array
+ * @param {T} item
+ * @returns {boolean}
+ */
+function _pushIfUniq(array, item) {
+	return array.indexOf(item) < 0 && !!array.push(item);
 }
