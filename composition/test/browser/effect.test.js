@@ -1,5 +1,5 @@
 /* eslint-disable react/display-name */
-import { createElement, render, createRef } from 'preact';
+import { createElement, render } from 'preact';
 import { setupScratch, teardown } from '../../../test/_util/helpers';
 import { createComponent, effect, value, reactive } from '../../src';
 import { nextFrame } from '../_util/nextFrame';
@@ -63,7 +63,10 @@ describe('effect', () => {
 	it('call cleanup with prop changes', () => {
 		const spy = sinon.spy();
 		const Comp = createComponent(() => {
-			effect(props => props.num, (n, o, onCleanup) => onCleanup(spy));
+			effect(
+				props => props.num,
+				(n, o, onCleanup) => onCleanup(spy)
+			);
 			return () => null;
 		});
 

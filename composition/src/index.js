@@ -16,7 +16,7 @@ const $Store = Symbol();
 /** @this {CompositionComponent} */
 function _afterRender() {
 	// proccess all pending `effect`s
-	var effect;
+	let effect;
 	while ((effect = this.__compositions._effects.pop())) {
 		cleanupEffect(effect);
 		effect._callback(
@@ -79,7 +79,7 @@ export function createComponent(setupFn) {
 /** @param {CompositionComponent} c */
 function _handleWatchers(c) {
 	// proccess all pending `watch`'s
-	var watcher;
+	let watcher;
 	while ((watcher = c.__compositions._watchers.pop())) {
 		const value = watcher._callback
 			? watcher._callback.apply(
