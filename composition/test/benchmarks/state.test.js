@@ -7,7 +7,7 @@ import { createElement, render } from 'preact';
 import { useState } from 'preact/hooks';
 import { setupScratch, teardown } from '../../../test/_util/helpers';
 import bench from '../../../test/_util/bench';
-import { createComponent, value, reactive } from '../../src';
+import { createComponent, value, reactive } from 'preact/composition';
 
 describe('benchmarks', function() {
 	let scratch;

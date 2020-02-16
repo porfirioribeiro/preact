@@ -6,7 +6,7 @@
 import { createElement, render } from 'preact';
 import { setupScratch, teardown } from '../../../test/_util/helpers';
 import bench from '../../../test/_util/bench';
-import { createComponent } from '../../src';
+import { createComponent } from 'preact/composition';
 
 describe('benchmarks', function() {
 	let scratch;

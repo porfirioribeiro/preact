@@ -1,7 +1,7 @@
 /* eslint-disable react/display-name */
 import { createElement, render, createContext, Component } from 'preact';
 import { setupScratch, teardown } from '../../../test/_util/helpers';
-import { createComponent, watch, onUnmounted } from '../../src';
+import { createComponent, watch, onUnmounted } from 'preact/composition';
 
 /** @jsx createElement */
 

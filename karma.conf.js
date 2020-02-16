@@ -124,7 +124,10 @@ module.exports = function(config) {
 		],
 
 		preprocessors: {
-			'{debug,hooks,composition,compat,test-utils,}/test/**/*': ['webpack', 'sourcemap']
+			'{debug,hooks,composition,compat,test-utils,}/test/**/*': [
+				'webpack',
+				'sourcemap'
+			]
 		},
 
 		webpack: {
@@ -169,7 +172,7 @@ module.exports = function(config) {
 					'preact/devtools': subPkgPath('./devtools/'),
 					'preact/compat': subPkgPath('./compat/'),
 					'preact/hooks': subPkgPath('./hooks/'),
-					'preact/composition': path.join(__dirname, './composition/src'),
+					'preact/composition': subPkgPath('./composition/'),
 					'preact/test-utils': subPkgPath('./test-utils/'),
 					preact: subPkgPath('')
 				}

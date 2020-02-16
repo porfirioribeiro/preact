@@ -1,7 +1,12 @@
 import { createElement, render } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
 import { setupScratch, teardown } from '../../../test/_util/helpers';
-import { createComponent, value, onMounted, onUnmounted } from '../../src';
+import {
+	createComponent,
+	value,
+	onMounted,
+	onUnmounted
+} from 'preact/composition';
 import { nextFrame } from '../_util/nextFrame';
 
 /** @jsx createElement */

@@ -1,7 +1,7 @@
 /* eslint-disable react/display-name */
 import { createElement, render } from 'preact';
 import { setupScratch, teardown } from '../../../test/_util/helpers';
-import { createComponent, memo } from '../../src';
+import { createComponent, memo } from 'preact/composition';
 
 /** @jsx createElement */
 

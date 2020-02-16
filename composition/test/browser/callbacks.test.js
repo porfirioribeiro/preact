@@ -1,6 +1,6 @@
 import { createElement, render } from 'preact';
 import { setupScratch, teardown } from '../../../test/_util/helpers';
-import { createComponent, watch } from '../../src';
+import { createComponent, watch } from 'preact/composition';
 
 /** @jsx createElement */
 
