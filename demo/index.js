@@ -128,9 +128,9 @@ class App extends Component {
 						<Link href="/nested-suspense" activeClassName="active">
 							Nested Suspense Bug
 						</Link>
-            <Link href="/composition/form" activeClassName="active">
-              composition
-            </Link>
+						<Link href="/composition/form" activeClassName="active">
+							composition
+						</Link>
 					</nav>
 				</header>
 				<main>
