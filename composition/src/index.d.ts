@@ -29,6 +29,10 @@ export type ValueHolder<T> = { value: T };
  */
 export function value<T>(v?: T): ValueHolder<T>;
 
+export type ComputedResult<T> = { readonly value: T };
+
+export function computed<T>(run: () => T, defaultValue?: T): ComputedResult<T>;
+
 export function unwrap<T>(
 	refOrValue: ValueHolder<T> | ReactiveHolder<T> | T
 ): T;

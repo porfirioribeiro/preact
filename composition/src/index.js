@@ -1,5 +1,7 @@
 import { options } from 'preact';
 import { assign } from '../../src/util';
+import { $Observable, track } from './observable';
+import { observable } from './observable';
 
 /** @type {import('./internal').Component} */
 let currentComponent;
@@ -25,10 +27,39 @@ options._render = vnode => {
 
 	/** the vnode component is a uninitialized composition component */
 	if (c.constructor.__compositions && !c.__compositions) {
-		c.__compositions = { u: [], w: [], e: [], x: {} };
+		let props = c.props;
+
+		c.__compositions = {
+			up: () => c.forceUpdate(),
+			u: [],
+			w: [],
+			e: [],
+			x: {},
+			_updateProps() {
+				Object.keys(propObservables).some(prop => {
+					propObservables[prop](c.props[prop]);
+				});
+				props = c.props;
+			}
+		};
+
+		/** @type {Record<string, import("./observable").Observable>} */
+		const propObservables = {};
+		const reactiveProps = new Proxy(
+			{},
+			{
+				get: function(target, prop, receiver) {
+					if (!propObservables[prop])
+						propObservables[prop] = observable(c.props[prop]);
+
+					return propObservables[prop]();
+				}
+			}
+		);
+
 		// this could be simplified if the API change to receive `ref` in props
 		// c.constructor = c.constructor(c);
-		const render = c.constructor(c);
+		const render = c.constructor(reactiveProps);
 		c.constructor =
 			'ref' in c.props
 				? props => {
@@ -40,11 +71,13 @@ options._render = vnode => {
 	}
 
 	/** the vnode component is a composition initialized component */
-	if (c.__compositions)
+	if (c.__compositions) {
+		c.__compositions._updateProps();
 		// call all watch
 		c.__compositions.w.some(up => {
 			handleEffect(up, c);
 		});
+	}
 };
 
 let oldAfterDiff = options.diffed;
@@ -141,66 +174,56 @@ export function inject(name, defaultValue) {
 }
 
 export function reactive(value) {
-	let x = value;
 	const c = currentComponent;
+	const obs = observable(value);
+	obs[$Observable].sub(c.__compositions.up);
 
-	const reactiveProperty = {
-		get() {
-			return x;
-		},
-		set(v) {
-			x = v;
-			c.forceUpdate();
-		}
+	const reactiveProperty = { get: obs, set: obs };
+
+	const properties = {
+		[$Reactive]: reactiveProperty,
+		$value: reactiveProperty
 	};
-	return Object.defineProperties(
-		{},
-		Object.keys(value).reduce(
-			(acc, key) =>
-				assign(acc, {
-					[key]: {
-						enumerable: true,
-						get() {
-							return x[key];
-						},
-						set(v) {
-							if (v !== x[key]) {
-								x = assign({}, x);
-								x[key] = v;
-								c.forceUpdate();
-							}
-						}
-					}
-				}),
-			{
-				[$Reactive]: reactiveProperty,
-				$value: reactiveProperty
+
+	Object.keys(value).some(key => {
+		properties[key] = {
+			enumerable: true,
+			get() {
+				return obs()[key];
+			},
+			set(v) {
+				let x = obs();
+				if (v !== x[key]) {
+					x = assign({}, x);
+					x[key] = v;
+					obs(x);
+				}
 			}
-		)
-	);
+		};
+	});
+	return Object.defineProperties({}, properties);
 }
 
 export function value(v) {
 	const c = currentComponent;
-	function get() {
-		return v;
-	}
+	const obs = observable(v);
+	obs[$Observable].sub(c.__compositions.up);
+
+	const reactiveProperty = { get: obs, set: obs };
+
 	return Object.defineProperties(
 		{},
 		{
-			[$Reactive]: { get },
-			value: {
-				get,
-				set(newValue) {
-					if (v !== newValue) {
-						v = newValue;
-						c.forceUpdate();
-					}
-				},
-				enumerable: true
-			}
+			[$Reactive]: reactiveProperty,
+			value: reactiveProperty
 		}
 	);
+}
+
+export function computed(run, defaultValue) {
+	const obs = observable(defaultValue);
+	track(run, obs);
+	return Object.defineProperty({}, 'value', { get: obs });
 }
 
 export function unwrap(v) {
