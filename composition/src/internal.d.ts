@@ -19,7 +19,8 @@ type Watcher = {
 };
 
 export interface ComponentComposition {
-	up: () => void;
+	f: () => void;
+	p: () => void;
 	/** list of unmount callbacks */
 	u: (() => void)[];
 	/** list of watchs */

@@ -1,12 +1,18 @@
+export declare const $Observable: unique symbol;
+
 export interface ObservableTracker {
 	(nextValue: T): T;
 	_observables: Observable[];
 }
 
+export interface ObservableInner<T> {
+	sub(fn: (v: T) => void): void;
+}
+
 export interface Observable<T> {
 	(): T;
 	(nextValue: T): T;
-	_observers: Set<ObservableTracker>;
+	[$Observable]: ObservableInner<T>;
 }
 
 export function observable<T>(value: T): Observable<T>;

@@ -1,7 +1,6 @@
 import { options } from 'preact';
 import { assign } from '../../src/util';
-import { $Observable, track } from './observable';
-import { observable } from './observable';
+import { $Observable, track, observable } from './observable';
 
 /** @type {import('./internal').Component} */
 let currentComponent;
@@ -30,12 +29,14 @@ options._render = vnode => {
 		let props = c.props;
 
 		c.__compositions = {
-			up: () => c.forceUpdate(),
 			u: [],
 			w: [],
 			e: [],
 			x: {},
-			_updateProps() {
+			f() {
+				c.forceUpdate();
+			},
+			p() {
 				Object.keys(propObservables).some(prop => {
 					propObservables[prop](c.props[prop]);
 				});
@@ -48,7 +49,7 @@ options._render = vnode => {
 		const reactiveProps = new Proxy(
 			{},
 			{
-				get: function(target, prop, receiver) {
+				get(_, prop) {
 					if (!propObservables[prop])
 						propObservables[prop] = observable(c.props[prop]);
 
@@ -72,7 +73,7 @@ options._render = vnode => {
 
 	/** the vnode component is a composition initialized component */
 	if (c.__compositions) {
-		c.__compositions._updateProps();
+		c.__compositions.p();
 		// call all watch
 		c.__compositions.w.some(up => {
 			handleEffect(up, c);
@@ -176,7 +177,7 @@ export function inject(name, defaultValue) {
 export function reactive(value) {
 	const c = currentComponent;
 	const obs = observable(value);
-	obs[$Observable].sub(c.__compositions.up);
+	obs[$Observable].sub(c.__compositions.f);
 
 	const reactiveProperty = { get: obs, set: obs };
 
@@ -207,7 +208,7 @@ export function reactive(value) {
 export function value(v) {
 	const c = currentComponent;
 	const obs = observable(v);
-	obs[$Observable].sub(c.__compositions.up);
+	obs[$Observable].sub(c.__compositions.f);
 
 	const reactiveProperty = { get: obs, set: obs };
 
