@@ -20,46 +20,46 @@ A quick overview of our repository:
 # The repo root (folder where you cloned the repo into)
 /
   src/  # Source code of our core
-	test/ # Unit tests for core
-	dist/ # Build artifacts for publishing on npm (may not be present)
+  test/ # Unit tests for core
+  dist/ # Build artifacts for publishing on npm (may not be present)
 
-	# Sub-package, can be imported via `preact/compat` by users.
-	# Compat stands for react-compatibility layer which tries to mirror the
-	# react API as close as possible (mostly legacy APIs)
-	compat/
-	  src/  # Source code of the compat addon
-		test/ # Tests related to the compat addon
-		dist/ # Build artifacts for publishing on npm (may not be present)
-
-	# Sub-package, can be imported via `preact/hooks` by users.
-	# The hooks API is an effect based API to deal with component lifcycles.
-	# It's similar to hooks in React
-	hooks/
-	  src/  # Source code of the hooks addon
-		test/ # Tests related to the hooks addon
-		dist/ # Build artifacts for publishing on npm (may not be present)
-
-	# Sub-package, can be imported via `preact/debug` by users.
-	# Includes debugging warnings and error messages for common mistakes found
-	# in Preact application. Also hosts the devtools bridge
-	debug/
-	  src/  # Source code of the debug addon
-		test/ # Tests related to the debug addon
-		dist/ # Build artifacts for publishing on npm (may not be present)
-
-	# Sub-package, can be imported via `preact/test-utils` by users.
-	# Provides helpers to make testing Preact applications easier
-	test-utils/
-	  src/  # Source code of the test-utils addon
-		test/ # Tests related to the test-utils addon
-		dist/ # Build artifacts for publishing on npm (may not be present)
-
-	# A demo application that we use to debug tricky errors and play with new
-	# features.
-	demo/
-
-	# Contains build scripts and dependencies for development
-	package.json
+  # Sub-package, can be imported via `preact/compat` by users.
+  # Compat stands for react-compatibility layer which tries to mirror the
+  # react API as close as possible (mostly legacy APIs)
+  compat/
+  	src/  # Source code of the compat addon
+  	test/ # Tests related to the compat addon
+  	dist/ # Build artifacts for publishing on npm (may not be present)
+  
+  # Sub-package, can be imported via `preact/hooks` by users.
+  # The hooks API is an effect based API to deal with component lifcycles.
+  # It's similar to hooks in React
+  hooks/
+  	src/  # Source code of the hooks addon
+  	test/ # Tests related to the hooks addon
+  	dist/ # Build artifacts for publishing on npm (may not be present)
+  
+  # Sub-package, can be imported via `preact/debug` by users.
+  # Includes debugging warnings and error messages for common mistakes found
+  # in Preact application. Also hosts the devtools bridge
+  debug/
+  	src/  # Source code of the debug addon
+  	test/ # Tests related to the debug addon
+  	dist/ # Build artifacts for publishing on npm (may not be present)
+  
+  # Sub-package, can be imported via `preact/test-utils` by users.
+  # Provides helpers to make testing Preact applications easier
+  test-utils/
+  	src/  # Source code of the test-utils addon
+  	test/ # Tests related to the test-utils addon
+  	dist/ # Build artifacts for publishing on npm (may not be present)
+  
+  # A demo application that we use to debug tricky errors and play with new
+  # features.
+  demo/
+  
+  # Contains build scripts and dependencies for development
+  package.json
 ```
 
 _Note: The code for rendering Preact on the server lives in another repo and is a completely separate npm package. It can be found here: [https://github.com/preactjs/preact-render-to-string](https://github.com/preactjs/preact-render-to-string)_
@@ -78,13 +78,13 @@ We merge every PR into the `master` branch which is the one that we'll use to pu
 
 ## Creating your first Pull-Request
 
-We try to make it as easy as possible to contribute to Preact and make heavy use of GitHub's "Draft PR" feature which tags Pull-Requests (short = PR) as work in progress. PRs tend to be published as soon as there is an idea that the developer deems worthwile to include into Preact and has written some rough code. The PR doesn't have to be perfect or anything really ;)
+We try to make it as easy as possible to contribute to Preact and make heavy use of GitHub's "Draft PR" feature which tags Pull-Requests (short = PR) as work in progress. PRs tend to be published as soon as there is an idea that the developer deems worthwhile to include into Preact and has written some rough code. The PR doesn't have to be perfect or anything really ;)
 
 Once a PR or a Draft PR has been created our community typically joins the discussion about the proposed change. Sometimes that includes ideas for test cases or even different ways to go about implementing a feature. Often this also includes ideas on how to make the code smaller. We usually refer to the latter as "code-golfing" or just "golfing".
 
 When everything is good to go someone will approve the PR and the changes will be merged into the `master` branch and we usually cut a release a few days/ a week later.
 
-_The big takeaway for you here is, that we will guide you along the way. We're here to help to make a PR ready for aproval!_
+_The big takeaway for you here is, that we will guide you along the way. We're here to help to make a PR ready for approval!_
 
 The short summary is:
 
@@ -163,7 +163,7 @@ For us a [codesandbox](https://codesandbox.io/) says more than a 1000 words :tad
 
 ## I have more questions on how to contribute to Preact. How can I reach you?
 
-We closely watch our issues and have a pretty active [Slack workspace](https://preact-slack.now.sh/). Nearly all our communication happens via these two forms of communication.
+We closely watch our issues and have a pretty active [Slack workspace](https://chat.preactjs.com/). Nearly all our communication happens via these two forms of communication.
 
 ## Releasing Preact (Maintainers only)
 

@@ -6,8 +6,9 @@
   "minify": {
     "mangle": {
       "properties": {
-        "regex": "^_",
+        "regex": "^_[^_]",
         "reserved": [
+          "__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED",
           "__REACT_DEVTOOLS_GLOBAL_HOOK__",
           "__PREACT_DEVTOOLS__",
           "_renderers",
@@ -24,11 +25,14 @@
   "props": {
     "cname": 6,
     "props": {
+      "$_vnodeId": "__v",
+      "$_cleanup": "__c",
       "$_afterPaintQueued": "__a",
       "$__hooks": "__H",
       "$_list": "__",
       "$_pendingEffects": "__h",
       "$_value": "__",
+      "$_original": "__v",
       "$_args": "__H",
       "$_factory": "__h",
       "$_depth": "__b",
@@ -43,15 +47,19 @@
       "$_pendingSuspensionCount": "__u",
       "$_childDidSuspend": "__c",
       "$_suspendedComponentWillUnmount": "__c",
+      "$_suspended": "__e",
       "$_dom": "__e",
+      "$_hydrating": "__h",
       "$_component": "__c",
       "$__html": "__html",
       "$_parent": "__",
       "$_pendingError": "__E",
       "$_processingException": "__",
-      "$_context": "__n",
+      "$_globalContext": "__n",
+      "$_context": "__c",
       "$_defaultValue": "__",
       "$_id": "__c",
+      "$_contextRef": "__",
       "$_parentDom": "__P",
       "$_prevState": "__u",
       "$_root": "__",
@@ -60,8 +68,11 @@
       "$_render": "__r",
       "$_hook": "__h",
       "$_catchError": "__e",
-      "$_unmount": "_e",
-      "$_owner": "__o"
+      "$_unmount": "__u",
+      "$_owner": "__o",
+      "$_skipEffects": "__s",
+      "$_rerenderCount": "__r",
+      "$_forwarded": "__f"
     }
   }
 }

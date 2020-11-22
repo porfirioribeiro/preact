@@ -9,3 +9,7 @@ yarn.lock
 test/ts/**/*.js
 coverage
 *.sw[op]
+*.log
+package/
+preact-*.tgz
+jsx-csstype.d.ts

@@ -12,11 +12,10 @@ export { PreactElement } from '../../src/internal';
 export interface Component<P = {}, S = {}> extends PreactComponent<P, S> {
 	isReactComponent?: object;
 	isPureReactComponent?: true;
+	_patchedLifecycles?: true;
 
-	_childDidSuspend?(
-		error: Promise<void>,
-		suspendingComponent: Component<any, any>
-	): void;
+	_childDidSuspend?(error: Promise<void>, suspendingVNode: VNode): void;
+	_suspended: (vnode: VNode) => (unsuspend: () => void) => void;
 	_suspendedComponentWillUnmount?(): void;
 }
 
@@ -24,6 +23,7 @@ export interface FunctionalComponent<P = {}>
 	extends PreactFunctionalComponent<P> {
 	shouldComponentUpdate?(nextProps: Readonly<P>): boolean;
 	_forwarded?: boolean;
+	_patchedLifecycles?: true;
 }
 
 export interface VNode<T = any> extends PreactVNode<T> {

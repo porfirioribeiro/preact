@@ -1,3 +1,7 @@
+// Users who only use Preact for SSR might not specify "dom" in their lib in tsconfig.json
+/// <reference lib="dom" />
+import * as CSS from './jsx-csstype';
+
 type Defaultize<Props, Defaults> =
 	// Distribute over unions
 	Props extends any // Make any properties included in Default optional
@@ -27,6 +31,20 @@ export namespace JSXInternal {
 
 	interface ElementChildrenAttribute {
 		children: any;
+	}
+
+	interface CSSProperties<
+		TLength = (string & {}) | number,
+		TTime = string & {}
+	> extends CSS.Properties<TLength, TTime> {
+		/**
+		 * The index signature was removed to enable closed typing for style
+		 * using CSSType. You're able to use type assertion or module augmentation
+		 * to add properties or an index signature of your own.
+		 *
+		 * For examples and more information, visit:
+		 * https://github.com/frenic/csstype#what-should-i-do-when-i-get-type-errors
+		 */
 	}
 
 	interface SVGAttributes<Target extends EventTarget = SVGElement>
@@ -222,7 +240,7 @@ export namespace JSXInternal {
 		strokeDashoffset?: string | number;
 		strokeLinecap?: 'butt' | 'round' | 'square' | 'inherit';
 		strokeLinejoin?: 'miter' | 'round' | 'bevel' | 'inherit';
-		strokeMiterlimit?: string;
+		strokeMiterlimit?: string | number;
 		strokeOpacity?: number | string;
 		strokeWidth?: number | string;
 		surfaceScale?: number | string;
@@ -442,7 +460,6 @@ export namespace JSXInternal {
 		onFormData?: GenericEventHandler<Target>;
 		onFormDataCapture?: GenericEventHandler<Target>;
 
-
 		// Keyboard Events
 		onKeyDown?: KeyboardEventHandler<Target>;
 		onKeyDownCapture?: KeyboardEventHandler<Target>;
@@ -612,7 +629,7 @@ export namespace JSXInternal {
 		autofocus?: boolean;
 		autoFocus?: boolean;
 		autoPlay?: boolean;
-		capture?: boolean;
+		capture?: boolean | string;
 		cellPadding?: number | string;
 		cellSpacing?: number | string;
 		charSet?: string;
@@ -666,6 +683,7 @@ export namespace JSXInternal {
 		label?: string;
 		lang?: string;
 		list?: string;
+		loading?: 'eager' | 'lazy';
 		loop?: boolean;
 		low?: number;
 		manifest?: string;
@@ -716,7 +734,7 @@ export namespace JSXInternal {
 		srcSet?: string;
 		start?: number;
 		step?: number | string;
-		style?: string | { [key: string]: string | number };
+		style?: string | CSSProperties;
 		summary?: string;
 		tabIndex?: number;
 		target?: string;
@@ -745,6 +763,20 @@ export namespace JSXInternal {
 		itemType?: string;
 		itemID?: string;
 		itemRef?: string;
+	}
+
+	interface HTMLMarqueeElement extends HTMLElement {
+		behavior?: 'scroll' | 'slide' | 'alternate';
+		bgColor?: string;
+		direction?: 'left' | 'right' | 'up' | 'down';
+		height?: number | string;
+		hspace?: number | string;
+		loop?: number | string;
+		scrollAmount?: number | string;
+		scrollDelay?: number | string;
+		trueSpeed?: boolean;
+		vspace?: number | string;
+		width?: number | string;
 	}
 
 	interface IntrinsicElements {
@@ -813,6 +845,7 @@ export namespace JSXInternal {
 		main: HTMLAttributes<HTMLElement>;
 		map: HTMLAttributes<HTMLMapElement>;
 		mark: HTMLAttributes<HTMLElement>;
+		marquee: HTMLAttributes<HTMLMarqueeElement>;
 		menu: HTMLAttributes<HTMLMenuElement>;
 		menuitem: HTMLAttributes<HTMLUnknownElement>;
 		meta: HTMLAttributes<HTMLMetaElement>;
@@ -868,6 +901,7 @@ export namespace JSXInternal {
 		svg: SVGAttributes<SVGSVGElement>;
 		animate: SVGAttributes<SVGAnimateElement>;
 		circle: SVGAttributes<SVGCircleElement>;
+		animateTransform: SVGAttributes<SVGAnimateElement>;
 		clipPath: SVGAttributes<SVGClipPathElement>;
 		defs: SVGAttributes<SVGDefsElement>;
 		desc: SVGAttributes<SVGDescElement>;
@@ -879,6 +913,7 @@ export namespace JSXInternal {
 		feConvolveMatrix: SVGAttributes<SVGFEConvolveMatrixElement>;
 		feDiffuseLighting: SVGAttributes<SVGFEDiffuseLightingElement>;
 		feDisplacementMap: SVGAttributes<SVGFEDisplacementMapElement>;
+		feDropShadow: SVGAttributes<SVGFEDropShadowElement>;
 		feFlood: SVGAttributes<SVGFEFloodElement>;
 		feGaussianBlur: SVGAttributes<SVGFEGaussianBlurElement>;
 		feImage: SVGAttributes<SVGFEImageElement>;

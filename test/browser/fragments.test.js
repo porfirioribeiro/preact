@@ -33,10 +33,14 @@ describe('Fragment', () => {
 		}
 	}
 
+	let resetInsertBefore;
+	let resetAppendChild;
+	let resetRemoveChild;
+
 	before(() => {
-		logCall(Node.prototype, 'insertBefore');
-		logCall(Node.prototype, 'appendChild');
-		logCall(Node.prototype, 'removeChild');
+		resetInsertBefore = logCall(Element.prototype, 'insertBefore');
+		resetAppendChild = logCall(Element.prototype, 'appendChild');
+		resetRemoveChild = logCall(Element.prototype, 'removeChild');
 		// logCall(CharacterData.prototype, 'remove');
 		// TODO: Consider logging setting set data
 		// ```
@@ -47,6 +51,12 @@ describe('Fragment', () => {
 		// 	set(value) { console.log('setData', value); orgData.set.call(this, value); }
 		// });
 		// ```
+	});
+
+	after(() => {
+		resetInsertBefore();
+		resetAppendChild();
+		resetRemoveChild();
 	});
 
 	beforeEach(() => {
@@ -541,7 +551,7 @@ describe('Fragment', () => {
 		expect(scratch.innerHTML).to.equal('<div>Hello</div>');
 	});
 
-	it.skip('should not preserve state between array nested in fragment and double nested array', () => {
+	it('should not preserve state between array nested in fragment and double nested array', () => {
 		function Foo({ condition }) {
 			return condition ? (
 				<Fragment>{[<Stateful key="a" />]}</Fragment>
@@ -2559,5 +2569,86 @@ describe('Fragment', () => {
 			'<div>.appendChild(#text)',
 			'<div>A3A4.appendChild(<div>B)'
 		]);
+	});
+
+	it('should properly place conditional elements around strictly equal vnodes', () => {
+		expectDomLog = true;
+		let set;
+
+		const Children = () => (
+			<Fragment>
+				<div>Navigation</div>
+				<div>Content</div>
+			</Fragment>
+		);
+
+		class Parent extends Component {
+			constructor(props) {
+				super(props);
+				this.state = { panelPosition: 'bottom' };
+				set = this.tooglePanelPosition = this.tooglePanelPosition.bind(this);
+			}
+
+			tooglePanelPosition() {
+				this.setState({
+					panelPosition: this.state.panelPosition === 'top' ? 'bottom' : 'top'
+				});
+			}
+
+			render() {
+				return (
+					<div>
+						{this.state.panelPosition === 'top' && <div>top panel</div>}
+						{this.props.children}
+						{this.state.panelPosition === 'bottom' && <div>bottom panel</div>}
+					</div>
+				);
+			}
+		}
+
+		const App = () => (
+			<Parent>
+				<Children />
+			</Parent>
+		);
+
+		const content = `<div>Navigation</div><div>Content</div>`;
+		const top = `<div><div>top panel</div>${content}</div>`;
+		const bottom = `<div>${content}<div>bottom panel</div></div>`;
+
+		render(<App />, scratch);
+		expect(scratch.innerHTML).to.equal(bottom);
+
+		clearLog();
+		set();
+		rerender();
+		expect(scratch.innerHTML).to.equal(top);
+		expectDomLogToBe([
+			'<div>.appendChild(#text)',
+			'<div>NavigationContentbottom panel.insertBefore(<div>top panel, <div>Navigation)',
+			'<div>bottom panel.remove()'
+		]);
+
+		clearLog();
+		set();
+		rerender();
+		expect(scratch.innerHTML).to.equal(bottom);
+		expectDomLogToBe([
+			'<div>.appendChild(#text)',
+			'<div>top panelNavigationContent.appendChild(<div>bottom panel)',
+			'<div>top panel.remove()'
+		]);
+
+		clearLog();
+		set();
+		rerender();
+		expect(scratch.innerHTML).to.equal(top);
+		expectDomLogToBe([
+			'<div>.appendChild(#text)',
+			'<div>NavigationContentbottom panel.insertBefore(<div>top panel, <div>Navigation)',
+			'<div>bottom panel.remove()'
+		]);
+
+		expectDomLog = false;
 	});
 });
